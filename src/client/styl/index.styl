@@ -29,7 +29,7 @@ i.plane
 
   .time-scroll-cont
     position absolute
-    top 200px
+    top 100px
     left 10px
     right 10px
     height 20px
@@ -53,50 +53,54 @@ i.plane
 
       .tick-marks
         position absolute
-        height 12%
+        height 16%
         width 100%
         border none
         margin 0px
         padding 0px
-        bottom 20px
-        z-index 9000
+        bottom 40px
         opacity 0.6
+        z-index 9000
 
 
         .mark
           border-right 1px solid #999
           position absolute
-          bottom 30%
 
-          .lbl
-            position absolute
-            font-size: 12px
-            bottom -20px
-            right -10px
+        .lbl
+          position absolute
+          font-size: 12px
+          margin-left -5px
+          cursor pointer
 
         .second-mark
           height 20%
           
         .five-second-mark
-          height 25%
+          height 35%
 
         .quarter-minute-mark
-          height 50%
+          height 60%
 
-          .lbl
-            font-size 9px
-            color #999
+        .quarter-minute-mark-lbl
+          font-size 9px
+          color #999
+          margin-top 20px
 
         .half-minute-mark
-          height 75%
+          height 80%
 
-          .lbl
-            font-size 9px
-            color #999
+        .half-minute-mark-lbl
+          font-size 9px
+          color #999
+          margin-top 28px
 
         .minute-mark
           height 100%
           border 1px solid #666
+
+        .minute-mark-lbl
+          margin-top 38px
           
       .tick-marks:hover
         opacity 1
@@ -106,9 +110,9 @@ i.plane
       .time
         position absolute
         width 100%
-        height 50%
+        height 60%
         margin 0px
-        margin-top 25%
+        margin-top 5%
         margin-bottom 25%
         background-color #eee
         border 1px solid #333
@@ -153,12 +157,13 @@ i.plane
 
         .time-info
           position absolute
-          top 10%
-          left 0px
+          bottom 0px
+          left -20px
           padding-left 4px
           padding-right 4px
           font-size 10px
-          color #ccc
+          color white
+          background-color #333
           border 1px dotted #ccc
 
       .cursor-mark.active

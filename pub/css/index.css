@@ -3,21 +3,22 @@ i.plane{font-size:100px;margin:40px;color:rgba(0,64,128,0.3);position:fixed;left
 .hero-unit{background-color:transparent;}
 .hero-unit h2{font-size:100px}
 .timeline{-webkit-user-select:none;width:100%;height:300px;position:fixed;top:0;left:0;}
-.timeline .time-scroll-cont{position:absolute;top:200px;left:10px;right:10px;height:20px}
+.timeline .time-scroll-cont{position:absolute;top:100px;left:10px;right:10px;height:20px}
 .timeline .time-window{margin:20px;position:absolute;left:10px;right:10px;height:80%;overflow-x:auto;overflow-y:hidden;}
 .timeline .time-window .time-cont{position:absolute;height:100%;border-bottom:1px solid #333;}
-.timeline .time-window .time-cont .tick-marks{position:absolute;height:12%;width:100%;border:none;margin:0;padding:0;bottom:20px;z-index:9000;opacity:.6;}
-.timeline .time-window .time-cont .tick-marks .mark{border-right:1px solid #999;position:absolute;bottom:30%;}
-.timeline .time-window .time-cont .tick-marks .mark .lbl{position:absolute;font-size:12px;bottom:-20px;right:-10px}
+.timeline .time-window .time-cont .tick-marks{position:absolute;height:16%;width:100%;border:none;margin:0;padding:0;bottom:40px;opacity:.6;z-index:9000;}
+.timeline .time-window .time-cont .tick-marks .mark{border-right:1px solid #999;position:absolute}
+.timeline .time-window .time-cont .tick-marks .lbl{position:absolute;font-size:12px;margin-left:-5px;cursor:pointer}
 .timeline .time-window .time-cont .tick-marks .second-mark{height:20%}
-.timeline .time-window .time-cont .tick-marks .five-second-mark{height:25%}
-.timeline .time-window .time-cont .tick-marks .quarter-minute-mark{height:50%;}
-.timeline .time-window .time-cont .tick-marks .quarter-minute-mark .lbl{font-size:9px;color:#999}
-.timeline .time-window .time-cont .tick-marks .half-minute-mark{height:75%;}
-.timeline .time-window .time-cont .tick-marks .half-minute-mark .lbl{font-size:9px;color:#999}
+.timeline .time-window .time-cont .tick-marks .five-second-mark{height:35%}
+.timeline .time-window .time-cont .tick-marks .quarter-minute-mark{height:60%}
+.timeline .time-window .time-cont .tick-marks .quarter-minute-mark-lbl{font-size:9px;color:#999;margin-top:20px}
+.timeline .time-window .time-cont .tick-marks .half-minute-mark{height:80%}
+.timeline .time-window .time-cont .tick-marks .half-minute-mark-lbl{font-size:9px;color:#999;margin-top:28px}
 .timeline .time-window .time-cont .tick-marks .minute-mark{height:100%;border:1px solid #666}
+.timeline .time-window .time-cont .tick-marks .minute-mark-lbl{margin-top:38px}
 .timeline .time-window .time-cont .tick-marks:hover{opacity:1}
-.timeline .time-window .time-cont .time{position:absolute;width:100%;height:50%;margin:0;margin-top:25%;margin-bottom:25%;background-color:#eee;border:1px solid #333;}
+.timeline .time-window .time-cont .time{position:absolute;width:100%;height:60%;margin:0;margin-top:5%;margin-bottom:25%;background-color:#eee;border:1px solid #333;}
 .timeline .time-window .time-cont .time .video{background-color:rgba(64,0,128,0.4);width:100%;height:12px}
 .timeline .time-window .time-cont .cursor-mark{position:absolute;top:0;bottom:0;left:50%;width:1px;height:100%;background-color:#333;z-index:8000;}
 .timeline .time-window .time-cont .cursor-mark i{position:absolute;color:#333}
@@ -25,7 +26,7 @@ i.plane{font-size:100px;margin:40px;color:rgba(0,64,128,0.3);position:fixed;left
 .timeline .time-window .time-cont .cursor-mark i.icon-caret-down{top:10%;left:-4px}
 .timeline .time-window .time-cont .cursor-mark.user-mark{background-color:#ccc;display:none;}
 .timeline .time-window .time-cont .cursor-mark.user-mark i{color:#ccc}
-.timeline .time-window .time-cont .cursor-mark.user-mark .time-info{position:absolute;top:10%;left:0;padding-left:4px;padding-right:4px;font-size:10px;color:#ccc;border:1px dotted #ccc}
+.timeline .time-window .time-cont .cursor-mark.user-mark .time-info{position:absolute;bottom:0;left:-20px;padding-left:4px;padding-right:4px;font-size:10px;color:#fff;background-color:#333;border:1px dotted #ccc}
 .timeline .time-window .time-cont .cursor-mark.active{background-color:#008000;}
 .timeline .time-window .time-cont .cursor-mark.active i{color:#008000}
 .timeline .time-window .time-cont .event{position:absolute;background-color:rgba(255,102,102,0.1);height:50%;bottom:0}

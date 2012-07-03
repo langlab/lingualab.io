@@ -51,7 +51,7 @@ quietMsg = sty.blue
 server =
 
     start: ->
-      @proc = spawn 'coffee', ['server.coffee']
+      @proc = spawn 'coffee', ['lingualab.coffee']
       @proc.on 'exit', =>
         @start()
 

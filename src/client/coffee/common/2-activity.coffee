@@ -123,7 +123,40 @@ module 'App.Activity', (exports, top)->
       @trigger type, _.extend data, { secs: @currentSecs(), ticks: @tickBank, name: name }
       @trigger 'any', _.extend data, { secs: @currentSecs(), ticks: @tickBank, type: type, name: name } 
 
+  class Time
+    constructor: (@totalSecs)->
+      @intSecs = Math.floor @totalSecs
+    
+    getSecs: ->
+      @secs ? @secs = @intSecs % 60
 
+    getMins: ->
+      @mins ? @mins = Math.floor ((@intSecs % 3600) / 60)
+
+    getHrs: ->
+      @hrs or @hrs = Math.floor(@intSecs/3600)      
+
+    getTenths: ->
+      @tenths ? @tenths = Math.floor (10*(@totalSecs - @intSecs))
+
+    getSecStr: ->
+      (if (s = @getSecs()) < 10 then "0" else "")+s
+
+    getMinStr: ->
+      (if (m = @getMins()) < 10 then "0" else "")+m
+
+    getHrStr: ->
+      (if (h = @getHrs()) < 10 then "0" else "")+h
+
+    setSecs: (@totalSecs)->
+      @intSecs = Math.floor @totalSecs
+      @hrs = @mins = @secs = @tenths = null
+      @
+
+    getTimeStr: ->
+      "#{ (if @getHrs() then @getHrStr()+":" else "") }#{ @getMinStr() }:#{ @getSecStr() }.#{ @getTenths() }"
+
+  exports.Time = Time
   class Model extends Backbone.Model
     initialize: ->
       @events = new App.Activity.Event.Collection @get('events')
@@ -173,24 +206,25 @@ module 'App.Activity', (exports, top)->
 
     events:
       'mousedown .tick-marks': (e)->
-        targetClass = $(e.target).attr('class')
-        console.log targetClass
-        if @userDragging is true then @$('.user-mark').hide()
-        @userDragging = true
+        target = $(e.target)
         extra = $(e.target).position().left
-        console.log e.offsetX,extra
-        @model.timer.seek @toSecs(e.offsetX+extra)
+        x = (if target.hasClass('lbl') then 0 else e.offsetX) + extra
+        if @userDragging then @model.timer.seek @toSecs(x)
+        @userDragging = true
+        @model.timer.seek Math.round(@toSecs(x))
         
 
       'mouseup .tick-marks': (e)->
         @userDragging = false
         @$('.user-mark').show()
 
+
       'mousemove .tick-marks': (e)->
-        targetClass = $(e.target).attr('class')
+        target = $(e.target)
         extra = $(e.target).position().left
-        if @userDragging then @model.timer.seek @toSecs(e.offsetX+extra)
-        @moveCursorToTime 'user', @toSecs(e.offsetX + extra)
+        x = (if target.hasClass('lbl') then 0 else e.offsetX) + extra
+        if @userDragging then @model.timer.seek @toSecs(x)
+        @moveCursorToTime 'user', Math.round(@toSecs(x))
 
       'mouseover .tick-marks': (e)->
         @$('.user-mark').show()
@@ -201,8 +235,8 @@ module 'App.Activity', (exports, top)->
 
     moveCursorTo: (type='',x)->
       @$(".cursor-mark#{ if type then '.'+type+'-mark' else '' }").css 'left', x
-      timeObj = @timer.model.currentTimeObj()
-      @$(".user-mark .time-info").text "#{timeObj.min}:#{timeObj.sec}.#{timeObj.tenths} s"
+      t = new Time @toSecs(x)
+      @$(".user-mark .time-info").text t.getTimeStr()
       @
 
     moveCursorToTime: (type='',secs)->
@@ -217,12 +251,15 @@ module 'App.Activity', (exports, top)->
       pixels * @model.get('duration') / @$('.time-cont').width()
 
 
+
+
     scaleTime: (@zoomLevel)->
       console.log 'scaleTime ',@zoomLevel, @pixelScaleFactor
       val = @zoomLevel * @pixelScaleFactor
       @$('.time-cont').width (val * @model.get('duration'))
-      for m,i in @$('.mark')
-        $(m).css 'left', "#{Math.floor(val*i)}px"
+      for m,i in @$('.mark,.lbl')
+        s = $(m).data('sec')
+        $(m).css 'left', "#{Math.floor(val*s)}px"
         
 
       @moveCursorToTime @timer.model.currentSecs()
@@ -250,11 +287,10 @@ module 'App.Activity', (exports, top)->
               else if (sec % 15 is 0) then 'quarter-minute' 
               else if (sec % 5 is 0) then 'five-second' else 'second'
               
-              div class:"#{type}-mark mark", ->
-                if type is 'minute'
-                  span class:'lbl', "#{sec / 60}m"
-                else if type in ['half-minute','quarter-minute']
-                  span class:'lbl', "#{ (sec % 60) }s"
+              div class:"#{type}-mark mark",'data-sec':"#{sec}"
+              markLbl = if type in ['half-minute','quarter-minute'] then (sec % 60)+'s' else (sec / 60)+'m'
+              if type in ['half-minute','quarter-minute','minute']
+                span class:"#{type}-mark-lbl lbl", 'data-sec':"#{sec}","#{markLbl}"
 
       div class:'timer-cont', ->
       div class:'time-scroll-cont'

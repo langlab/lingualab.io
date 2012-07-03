@@ -235,7 +235,7 @@
   })(jQuery);
 
   module('App.Activity', function(exports, top) {
-    var Model, Timer, Views, _ref;
+    var Model, Time, Timer, Views, _ref;
     Timer = (function() {
 
       Timer.prototype.cueTimes = [];
@@ -425,6 +425,62 @@
       return Timer;
 
     })();
+    Time = (function() {
+
+      function Time(totalSecs) {
+        this.totalSecs = totalSecs;
+        this.intSecs = Math.floor(this.totalSecs);
+      }
+
+      Time.prototype.getSecs = function() {
+        var _ref;
+        return (_ref = this.secs) != null ? _ref : this.secs = this.intSecs % 60;
+      };
+
+      Time.prototype.getMins = function() {
+        var _ref;
+        return (_ref = this.mins) != null ? _ref : this.mins = Math.floor((this.intSecs % 3600) / 60);
+      };
+
+      Time.prototype.getHrs = function() {
+        return this.hrs || (this.hrs = Math.floor(this.intSecs / 3600));
+      };
+
+      Time.prototype.getTenths = function() {
+        var _ref;
+        return (_ref = this.tenths) != null ? _ref : this.tenths = Math.floor(10 * (this.totalSecs - this.intSecs));
+      };
+
+      Time.prototype.getSecStr = function() {
+        var s;
+        return ((s = this.getSecs()) < 10 ? "0" : "") + s;
+      };
+
+      Time.prototype.getMinStr = function() {
+        var m;
+        return ((m = this.getMins()) < 10 ? "0" : "") + m;
+      };
+
+      Time.prototype.getHrStr = function() {
+        var h;
+        return ((h = this.getHrs()) < 10 ? "0" : "") + h;
+      };
+
+      Time.prototype.setSecs = function(totalSecs) {
+        this.totalSecs = totalSecs;
+        this.intSecs = Math.floor(this.totalSecs);
+        this.hrs = this.mins = this.secs = this.tenths = null;
+        return this;
+      };
+
+      Time.prototype.getTimeStr = function() {
+        return "" + (this.getHrs() ? this.getHrStr() + ":" : "") + (this.getMinStr()) + ":" + (this.getSecStr()) + "." + (this.getTenths());
+      };
+
+      return Time;
+
+    })();
+    exports.Time = Time;
     Model = (function(_super) {
 
       __extends(Model, _super);
@@ -497,29 +553,29 @@
 
       Timeline.prototype.events = {
         'mousedown .tick-marks': function(e) {
-          var extra, targetClass;
-          targetClass = $(e.target).attr('class');
-          console.log(targetClass);
-          if (this.userDragging === true) {
-            this.$('.user-mark').hide();
+          var extra, target, x;
+          target = $(e.target);
+          extra = $(e.target).position().left;
+          x = (target.hasClass('lbl') ? 0 : e.offsetX) + extra;
+          if (this.userDragging) {
+            this.model.timer.seek(this.toSecs(x));
           }
           this.userDragging = true;
-          extra = $(e.target).position().left;
-          console.log(e.offsetX, extra);
-          return this.model.timer.seek(this.toSecs(e.offsetX + extra));
+          return this.model.timer.seek(Math.round(this.toSecs(x)));
         },
         'mouseup .tick-marks': function(e) {
           this.userDragging = false;
           return this.$('.user-mark').show();
         },
         'mousemove .tick-marks': function(e) {
-          var extra, targetClass;
-          targetClass = $(e.target).attr('class');
+          var extra, target, x;
+          target = $(e.target);
           extra = $(e.target).position().left;
+          x = (target.hasClass('lbl') ? 0 : e.offsetX) + extra;
           if (this.userDragging) {
-            this.model.timer.seek(this.toSecs(e.offsetX + extra));
+            this.model.timer.seek(this.toSecs(x));
           }
-          return this.moveCursorToTime('user', this.toSecs(e.offsetX + extra));
+          return this.moveCursorToTime('user', Math.round(this.toSecs(x)));
         },
         'mouseover .tick-marks': function(e) {
           return this.$('.user-mark').show();
@@ -530,13 +586,13 @@
       };
 
       Timeline.prototype.moveCursorTo = function(type, x) {
-        var timeObj;
+        var t;
         if (type == null) {
           type = '';
         }
         this.$(".cursor-mark" + (type ? '.' + type + '-mark' : '')).css('left', x);
-        timeObj = this.timer.model.currentTimeObj();
-        this.$(".user-mark .time-info").text("" + timeObj.min + ":" + timeObj.sec + "." + timeObj.tenths + " s");
+        t = new Time(this.toSecs(x));
+        this.$(".user-mark .time-info").text(t.getTimeStr());
         return this;
       };
 
@@ -559,15 +615,16 @@
       };
 
       Timeline.prototype.scaleTime = function(zoomLevel) {
-        var i, m, val, _i, _len, _ref;
+        var i, m, s, val, _i, _len, _ref;
         this.zoomLevel = zoomLevel;
         console.log('scaleTime ', this.zoomLevel, this.pixelScaleFactor);
         val = this.zoomLevel * this.pixelScaleFactor;
         this.$('.time-cont').width(val * this.model.get('duration'));
-        _ref = this.$('.mark');
+        _ref = this.$('.mark,.lbl');
         for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
           m = _ref[i];
-          $(m).css('left', "" + (Math.floor(val * i)) + "px");
+          s = $(m).data('sec');
+          $(m).css('left', "" + (Math.floor(val * s)) + "px");
         }
         this.moveCursorToTime(this.timer.model.currentSecs());
         return this.addEvents();
@@ -596,23 +653,23 @@
             return div({
               "class": 'tick-marks'
             }, function() {
-              var sec, type, _i, _ref, _results;
+              var markLbl, sec, type, _i, _ref, _results;
               _results = [];
               for (sec = _i = 0, _ref = Math.floor(this.model.get('duration')); 0 <= _ref ? _i <= _ref : _i >= _ref; sec = 0 <= _ref ? ++_i : --_i) {
                 type = sec % 60 === 0 ? 'minute' : sec % 30 === 0 ? 'half-minute' : sec % 15 === 0 ? 'quarter-minute' : sec % 5 === 0 ? 'five-second' : 'second';
-                _results.push(div({
-                  "class": "" + type + "-mark mark"
-                }, function() {
-                  if (type === 'minute') {
-                    return span({
-                      "class": 'lbl'
-                    }, "" + (sec / 60) + "m");
-                  } else if (type === 'half-minute' || type === 'quarter-minute') {
-                    return span({
-                      "class": 'lbl'
-                    }, "" + (sec % 60) + "s");
-                  }
-                }));
+                div({
+                  "class": "" + type + "-mark mark",
+                  'data-sec': "" + sec
+                });
+                markLbl = type === 'half-minute' || type === 'quarter-minute' ? (sec % 60) + 's' : (sec / 60) + 'm';
+                if (type === 'half-minute' || type === 'quarter-minute' || type === 'minute') {
+                  _results.push(span({
+                    "class": "" + type + "-mark-lbl lbl",
+                    'data-sec': "" + sec
+                  }, "" + markLbl));
+                } else {
+                  _results.push(void 0);
+                }
               }
               return _results;
             });
