@@ -195,7 +195,9 @@ module 'App.Activity', (exports, top)->
 
       @model.timer.on 'event', (data)=>
         if data.name in ['seek','tick']
-          @moveCursorToTime 'timer', @model.timer.currentSecs()
+          @moveCursorToTime 'timer', s = @model.timer.currentSecs()
+          t = new Time s
+          @$(".cursor-mark.active .time-info").text t.getTimeStr()
 
       @model.timer.on 'status', (data)=>
         if data.name is 'started' then @$('.timer-mark').addClass('active')
@@ -274,10 +276,10 @@ module 'App.Activity', (exports, top)->
           div class:'time', ->
           
           div class:'cursor-mark user-mark', ->
-
             div class:'time-info', 'xx:xx:xx'
 
           div class:'cursor-mark timer-mark', ->
+            div class:'time-info', 'xx:xx:xx'
 
 
           div class:'tick-marks', ->

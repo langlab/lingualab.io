@@ -536,9 +536,11 @@
           max: 4
         });
         this.model.timer.on('event', function(data) {
-          var _ref;
+          var s, t, _ref;
           if ((_ref = data.name) === 'seek' || _ref === 'tick') {
-            return _this.moveCursorToTime('timer', _this.model.timer.currentSecs());
+            _this.moveCursorToTime('timer', s = _this.model.timer.currentSecs());
+            t = new Time(s);
+            return _this.$(".cursor-mark.active .time-info").text(t.getTimeStr());
           }
         });
         return this.model.timer.on('status', function(data) {
@@ -649,7 +651,11 @@
             });
             div({
               "class": 'cursor-mark timer-mark'
-            }, function() {});
+            }, function() {
+              return div({
+                "class": 'time-info'
+              }, 'xx:xx:xx');
+            });
             return div({
               "class": 'tick-marks'
             }, function() {
