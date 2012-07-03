@@ -1,0 +1,220 @@
+###
+* Cakefile for build tasks
+###
+
+fs = require 'fs'
+path = require 'path'
+hound = require 'hound'
+sty = require 'sty'
+
+_  = require 'underscore'
+
+{ spawn } = require 'child_process'
+
+cs = require 'coffee-script'
+less = require 'less'
+stylus = require 'stylus'
+
+CFG = require './server/config'
+
+{ parser: jsp, uglify: pro } = require 'uglify-js'
+
+doOnlyEvery = (every,fn)-> _.throttle fn, every
+
+
+uglify = (code)->
+
+  ast = jsp.parse(code)           # parse code and get the initial AST
+  ast = pro.ast_mangle(ast)       # get a new AST with mangled names
+  ast = pro.ast_squeeze(ast)      # get an AST with compression optimizations
+  
+  pro.gen_code(ast)               # compressed code here
+
+
+
+concat = (pathList)->
+
+  code = ''
+  for pth in pathList
+    code += (fs.readFileSync pth) + ';'
+
+  code
+
+svMsg = _.compose sty.u, sty.b, sty.yellow
+jsMsg = _.compose sty.u, sty.b, sty.green
+cssMsg = _.compose sty.u, sty.b, sty.magenta
+
+quietMsg = sty.blue
+
+
+# controllable web server object
+server =
+
+    start: ->
+      @proc = spawn 'coffee', ['server.coffee']
+      @proc.on 'exit', =>
+        @start()
+
+      @proc.stdout.on 'data', (msg)-> console.log '* '+msg
+      @
+
+    restart: ->
+      @proc?.kill()
+      @
+
+    watch: ->
+      @watcher = hound.watch './server'
+
+      @watcher.on 'change', doOnlyEvery 500, (file, stats)=>
+        console.log "#{svMsg "changed: #{file}"}."
+        @restart()
+
+      @watcher.on 'create', doOnlyEvery 500, (file,stats)=>
+        console.log "#{svMsg "created: #{file}"}."
+        @restart()
+
+      @watcher.on 'delete', doOnlyEvery 500, (file,stats)=>
+        console.log "#{svMsg "deleted: #{file}"}."
+        @restart()
+
+      @
+
+
+client =
+
+
+  vendorJS: -> concat @jsClientFiles
+
+  makeVendorJS: ->
+    baseDir = './client/js/'
+    fs.writeFileSync '../pub/js/vendor.js', concat (baseDir+fileName for fileName in fs.readdirSync(baseDir, 'utf8'))
+    @
+
+  makeAppJS: ->
+    baseDir = './client/coffee/'
+    roleDirs = fs.readdirSync baseDir
+    console.log baseDir
+    for fileDir in roleDirs
+
+      if fs.statSync(objPath = baseDir+fileDir).isDirectory()
+
+        fileList = (fileName for fileName in fs.readdirSync objPath when /\.coffee$/.test(fileName))
+        pathList = ((baseDir+fileDir+'/'+fileName) for fileName in fileList)
+
+        code = cs.compile concat pathList
+        code = if (CFG.STAGE is 'PROD') then uglify code else code
+
+        outPath = "../pub/js/#{ fileDir }.js"
+        console.log quietMsg "compiling into #{ outPath }: #{fileList}"
+        fs.writeFileSync outPath, code, 'utf8'
+
+      else if path.extname(objPath) is 'coffee'
+
+        code = cs.compile fs.readFileSync(objPath)
+        code = if (CFG.STAGE is 'PROD') then uglify code else code
+        outPath = "../pub/js/#{ path.basename(dirPath).replace('coffee','js') }"
+        console.log quietMsg "compiling to #{ outPath }:  #{ path.basename objPath }"
+        fs.writeFileSync outPath, code, 'utf8'
+    @
+
+  makeJS: ->
+    @makeVendorJS().makeAppJS()
+  
+  makeVendorCSS: ->
+    parser = new less.Parser {
+      paths: ['./client/less/']
+      filename: 'bootstrap.less'
+    }
+
+    parser.parse (fs.readFileSync './client/less/bootstrap.less', 'utf8'), (err,tree)->
+      try
+        fs.writeFileSync '../pub/css/bootstrap.css', tree.toCSS({compress: true}), 'utf8'
+      catch e
+        console.log e
+    @
+
+  makeAppCSS: ->
+    stylus(fs.readFileSync './client/styl/index.styl', 'utf8').set('compress',true).render (err,css)->
+      fs.writeFileSync '../pub/css/index.css', css, 'utf8'
+    @
+
+  makeCSS: ->
+    @makeVendorCSS().makeAppCSS()
+
+  # watch changes to the stylus code and recompile to css
+  watchCSS: ->
+
+    @stylusWatcher = hound.watch './client/styl'
+
+    @stylusWatcher.on 'change', doOnlyEvery 500, (file, stats)=>
+      console.log "#{ cssMsg "changed:, #{file}"}"
+      @makeAppCSS()
+
+    @stylusWatcher.on 'create', doOnlyEvery 500, (file, stats)=>
+      console.log "#{ cssMsg "created:, #{file}"}"
+      @makeAppCSS()
+
+    @stylusWatcher.on 'delete', doOnlyEvery 500, (file, stats)=>
+      console.log "#{ cssMsg "deleted:, #{file}"}"
+      @makeAppCSS()
+    @
+
+  # watch changes to the coffee scripts and recompile to js
+  watchJS: ->
+
+    @jsWatcher = hound.watch './client/coffee'
+
+    @jsWatcher.on 'change', doOnlyEvery 500, (file, stats)=>
+      console.log "#{ jsMsg "changed:, #{file}"}"
+      @makeAppJS()
+
+    @jsWatcher.on 'create', doOnlyEvery 500, (file,stats)=>
+      console.log "#{ jsMsg "created:, #{file}"}"
+      @makeAppJS()
+
+    @jsWatcher.on 'delete', doOnlyEvery 500, (file,stats)=>
+      console.log "#{ jsMsg "deleted:, #{file}"}"
+      @makeAppJS()
+
+    @
+
+
+
+
+
+task 'build:vendorJS', 'bundle/minify the vendor js files', client.makeVendorJS
+task 'build:appJS', 'bundle/compile/minify(in prod) my coffee', client.makeAppJS
+  
+task 'build:vendorCSS', 'compile the bootstrap less to css, place in pub/css', client.makeVendorCSS
+task 'build:appCSS', 'compile stylus to css, place in pub/css', client.makeAppCSS
+
+  
+
+task 'build:client', '', ->
+  client.makeJS().makeCSS()
+
+  
+
+task 'dev', 'watch and recompile, restart server during dev', ->
+  
+  client.makeJS().makeCSS().watchJS().watchCSS()
+  server.start().watch()
+
+  console.log sty.green "ready for dev!"
+
+
+# to use in conjunction with something like live reload
+task 'server:watch', 'start server, watch server files, restart on change', ->
+	
+	server.start().watch()
+
+	console.log sty.green "ready for dev!"
+
+
+  
+
+
+
+
+
+
