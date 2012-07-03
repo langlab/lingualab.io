@@ -1,15 +1,4 @@
-###
 
-for this boilerplate, you need:
-
-  - express
-  - socket.io
-  - mongoose
-  - mongooseAuth
-  - coffeekup
-  - underscore
-
-###
 
 CFG = require './server/config'
 
