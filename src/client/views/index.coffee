@@ -10,16 +10,13 @@ html lang:'en', ->
     # styles
     link rel:'stylesheet', href:'/css/bootstrap.css'
     link rel:'stylesheet', href:'/css/index.css'
-    link rel:'stylesheet', href:'/css/nouislider.css'
 
   body ->
   
     # scripts
     script type:'text/javascript',src:'/socket.io/socket.io.js'
+    script type:'text/javascript',src:'/ck.js'
     script type:'text/javascript',src:'/js/vendor.js' # everything besides sockets
-    
-
-    
 
     # this will inject the following to global namespace:
     #   - session and user data
@@ -35,6 +32,8 @@ html lang:'en', ->
           expires: @session.cookie.expires
           lastAccess: @session.lastAccess
           data: @session
+          user: @user
+        #files: @files
         CFG: @CFG.CLIENT()
 
       script id:'sessionBootstrap', type:'text/javascript', """
@@ -50,5 +49,5 @@ html lang:'en', ->
     
     # only include if user is signed in
     # you can also check for roles
-    if @user 
-      script type:'text/javascript',src: '/js/user.js'
+    if @user?.role is 'teacher'
+      script type:'text/javascript',src: '/js/teacher.js'

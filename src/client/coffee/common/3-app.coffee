@@ -1,7 +1,3 @@
-# contains models and view for all users, 
-# even signed out
-
-
 # main app module
 
 module 'App', (exports,top)->
@@ -16,28 +12,19 @@ module 'App', (exports,top)->
     tagName: 'div'
 
     template: ->
-      i class:'icon-plane plane'
       div class:'hero-unit', ->
-        h2 'boilerplate!'
+        h2 ->
+          i class:'icon-beaker icon-large'
+          text ' lingualab.io'
+        a href:'/auth/twitter',class:'btn', ->
+          i class:'icon-twitter'
+          span ' sign in with twitter'
 
     render: ->
       @$el.html ck.render @template
-      @$el.hide()
       @
 
-    resize: ->
-      @$el.center()
-      [ x, y ] = [ $(window).width() / 7, $(window).height() / 7 ]
-      move('.plane').set('left', x ).set('top', y).end()
-      move('.plane').scale($(window).height() / 600).end()
-      move('.hero-unit').scale($(window).height() / 600).end()
 
-    open: ->
-      super()
-      @resize()
-      wait 400, =>
-        @$el.center().fadeIn()
-        $(window).resize => @resize()
 
 
   class exports.Router extends Backbone.Router
@@ -54,9 +41,8 @@ module 'App', (exports,top)->
       'timer':'timer'
 
     home: ->
-      v = new UI.Slider { handleWidthPerc: 25 }
-      v.render().open()
-      v.on 'change', (val)-> console.log 'new val: ',val
+      @clearViews()
+      @views.main.render().open()
 
     timeline: ->
       @clearViews()
@@ -101,11 +87,12 @@ module 'App', (exports,top)->
 
 # kick it off
 $ ->
-  app.router ?= new App.Router()
+  
 
   # if there is a signed-in user, 
   # wait for the next script to start the router
 
-  if not window.user
-    Backbone.history.start()
+  app.router ?= if window.app.session.user?.role is 'teacher' then (new App.Teacher.Router()) else (new App.Router())
+
+  Backbone.history.start()
 

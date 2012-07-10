@@ -1,14 +1,28 @@
-CFG = require '../config'
 
+CFG = require '../config'
 mongoose = require 'mongoose'
-mongoose.connect "mongodb://#{ CFG.DB.HOST() }/#{ CFG.DB.NAME }"
 Schema = mongoose.Schema
 ObjectId = Schema.ObjectId
+
+console.log dbUrl = "mongodb://#{ CFG.DB.HOST }/#{ CFG.DB.NAME }"
+mongoose.connect dbUrl
+
 mongooseAuth = require 'mongoose-auth'
 _ = require 'underscore'
 
 
-UserSchema = new Schema {}
+UserSchema = new Schema {
+  role: { type: String, enum: ['teacher','student'], default: 'teacher' }
+  created: { type: Date, default: Date.now() }
+  lastLogin: Date 
+  activeSessions: { any: {} }
+  activeClients: { any: {} }
+  twitterId: { type: Number, index: true }
+  twitterName: String
+  twitterData: String
+  name: String
+}
+
 UserSchema.plugin mongooseAuth, {
 
   everymodule:
@@ -21,11 +35,45 @@ UserSchema.plugin mongooseAuth, {
       myHostname: "http://#{CFG.HOST()}"
       consumerKey: CFG.TWITTER.CONSUMER_KEY
       consumerSecret: CFG.TWITTER.CONSUMER_SECRET
-      callbackPath: '/twitter/callback'
+      callbackPath: '/twitter/return'
       redirectPath: '/'
       moduleTimeout: 15000
 
 }
+
+myUserMethods =
+  getFiles: (cb)->
+    File.find { owner: @._id }, (err,files)->
+      cb err,files
+
+# additional static methods for users 'collection'
+myUserStatics =
+  
+  # keep track of all of the connected sockets 
+  # and connected sessions
+  # for this user in an object/collection
+  connectUser: (userId, sock, sess)->
+    
+    @activeSockets ?= {}
+    thisUser = @activeSockets[userId] ?= {}
+    thisUser[sock.id] = sock
+    
+    @activeSessions ?= {}
+    thisUser = @activeSessions[userId] ?= {}
+    thisUser[sess.id] ?= sess.data
+
+  # removes a socket from the users's collection when it disconnects
+  disconnectUser: (userId, sockId)->
+    delete @activeSockets[userId][sockId]
+  
+  getAll: (cb)->
+    @find (err, users)->
+      cb users
+
+# careful to just add them to UserSchema 
+# so as not to overwrite mongooseAuth statics
+_.extend UserSchema.statics, myUserStatics
+_.extend UserSchema.methods, myUserMethods
 
 
 ModelSchema = new Schema {
@@ -74,11 +122,10 @@ ModelSchema.statics =
             cb err
 
 
-Model = mongoose.model 'model', ModelSchema
-User = mongoose.model 'user', UserSchema
-
 module.exports =
   mongoose: mongoose
-  Model: Model
-  User: User
+  Model: Model = mongoose.model 'model', ModelSchema
+  User: User = mongoose.model 'user', UserSchema
+  File: File = mongoose.model 'file', require './file'
+  Log: Log = mongoose.model 'log', require './log'
   

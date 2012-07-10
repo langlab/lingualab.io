@@ -29,8 +29,8 @@ module.exports =
     SECRET: 'x'
 
   DB:
-    HOST: -> @["#{ @STAGE }_HOST"]
-    NAME: 'test'
+    HOST: 'lingualab.io'
+    NAME: 'lingualab'
 
 
   # have CLIENT return the configuration object to inject into the client
