@@ -6,12 +6,14 @@ express = require 'express'
 store = new express.session.MemoryStore()
 _ = require 'underscore'
 
-mongoose = require('./db').mongoose
+
 
 
 mongooseAuth = require 'mongoose-auth'
 
 app = express.createServer()
+
+{mongoose} = app.db = require('./db')
 
 app.use express.methodOverride()
 app.use express.cookieParser()
@@ -21,6 +23,7 @@ app.use express.session {
   store: store
 }
 
+delete express.bodyParser.parse['multipart/form-data']
 
 app.use express.bodyParser()
 app.use mongooseAuth.middleware()

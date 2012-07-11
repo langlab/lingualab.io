@@ -12,7 +12,8 @@ html lang:'en', ->
     link rel:'stylesheet', href:'/css/index.css'
 
   body ->
-  
+    div class:'main container', ->
+
     # scripts
     script type:'text/javascript',src:'/socket.io/socket.io.js'
     script type:'text/javascript',src:'/ck.js'

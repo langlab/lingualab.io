@@ -2,6 +2,7 @@
 module 'App.File', (exports,top)->
 
   class Model extends Backbone.Model
+    idAttribute: '_id'
 
   class Collection extends Backbone.Collection
     model: Model
@@ -9,9 +10,18 @@ module 'App.File', (exports,top)->
 
     initialize: ->
       @fetch()
+
+    fromDB: (data)->
+      {method, model, options} = data
+      console.log 'updating ',model
+      switch method
+        when 'create'
+          @add model
+        when 'status'
+          @get(model._id).set(model)
     
     uploadFile: (file) ->
-      
+
       onProgress = (e) ->
         per = Math.round((e.position / e.total) * 100)
         console.log 'progress: '+per
@@ -61,7 +71,7 @@ module 'App.File', (exports,top)->
 
   class Views.Browser extends Views.DragOver
     tagName: 'div'
-    className: 'row'
+    className: 'row file-browser'
     template: ->
       ul class:'thumbnails', ->
         for f in @files.models
@@ -75,14 +85,30 @@ module 'App.File', (exports,top)->
       @$el.html ck.render @template, {files: @collection}
       @
 
+
+  class Views.ListItem extends Backbone.View
+    tagName: 'tr'
+    className: 'file-list-item'
+
+    template: ->
+      console.log @
+      td @get('title')
+      td @get('status')
+      td moment(@get('created')).format("MMM D h:mm:ss a")
+      td @get('localPath')
+
+
+
+
   class Views.List extends Views.DragOver
     tagName: 'div'
-    className: 'fileList'
-    id: 'fileList'
+    className: 'container file-list'
+    # id: 'file-list'
 
     initialize: ->
-      @collection.on 'add', (f)->
-        console.log 'added file: ',f
+      @collection.on 'add', @addItem
+      @collection.on 'change', (f)->
+        f.listItemView.render()
 
       @collection.on 'reset', => @render()
       
@@ -99,28 +125,33 @@ module 'App.File', (exports,top)->
         thead ->
           tr ->
             th 'Title'
+            th ''
             th 'uploaded'
             th 'description here...'
-        tbody ->
+        
           tr class:'upload-place-holder', ->
-            td colspan:'3', 'drop to upload your file'
-          for f in @files.models
-            console.log f
-            tr ->
-              td f.get('title')
-              td moment(f.get('created')).format("MMM D h:mm:ss a")
-              td f.get('localPath')
+            td colspan:'4', 'drop to upload your file'
+        tbody ->
+        tfoot ->
           tr ->
-            td colspan:'3', ->
+            td colspan:'4', ->
               form action:'/upload', method:'post', enctype:"multipart/form-data", ->
                 input type:'text', name: 'title'
                 input type:'file', name:'upload'
                 input type:'submit', value:'upload'
+
+    addItem: (f)=>
+      f.listItemView ?= new Views.ListItem { model: f }
+      f.listItemView.render().open @$('tbody')
+      @
     
     render: ->
-      @$el.html ck.render @template, {files: @collection}
+      console.log @collection
+      @$el.html ck.render @template, @collection
+
+      @addItem f for f in @collection.models
+
       @delegateEvents()
       @
 
-  [exports.Model, exports.Collection] = [Model,Collection]
-
+  [exports.Model,exports.Collection] = [Model, Collection]

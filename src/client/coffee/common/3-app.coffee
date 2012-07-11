@@ -1,14 +1,12 @@
 # main app module
 
 module 'App', (exports,top)->
-  
-  class Session extends Backbone.Model
 
   exports.Views = Views = {}
 
   # sample view
   class Views.Main extends Backbone.View
-    className: 'main'
+    className: 'login'
     tagName: 'div'
 
     template: ->

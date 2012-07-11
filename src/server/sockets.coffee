@@ -1,11 +1,12 @@
 
 CFG = require './config'
-{ User, Model, mongoose } = require './db'
 
 _ = require 'underscore'
 io = require 'socket.io'
 
 module.exports = (app)->
+
+  { User, File } = app.db
   
   sio = io.listen app
   
@@ -36,10 +37,20 @@ module.exports = (app)->
     # console.log 'session: ', socket.handshake.session
     
     socket.set 'userId', socket.handshake.userId
+
+    # each client joins own private room (handles access via multiple clients simultaneously)
+    socket.join socket.handshake.userId
+
+    # all clients join the sys channel for universal announcements
+    socket.join 'sys'
     
-    # receive data from backbone sync and pass to mongoos object
-    socket.on 'model', (data,cb)->
-      Model.sync data, cb
+    # receive data from backbone sync and pass to mongoose object
+    socket.on 'file', (data,cb)->
+      File.sync data, cb
+
+  
+  File.socketSetup(sio)
+
 
 
   sio

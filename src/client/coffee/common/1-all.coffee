@@ -15,12 +15,16 @@ w.doEvery = (someTime,action)->
 
 # include the socket connection in every Model and View
 
-Backbone.Model::connectSocket = Backbone.Collection::connectSocket = Backbone.View::connectSocket = ->
-  @io ?= window.app.sock
+Backbone.Model::io = Backbone.Collection::io = Backbone.View::io = ->
+  window.app.sock
 
 Backbone.View::open = (cont = 'body')->
   @$el.appendTo cont
   @trigger 'open', cont
+  @
+
+Backbone.View::render = ->
+  @$el.html ck.render @template, @model ? @collection
   @
 
 Backbone.Router::extendRoutesWith = (xtraRoutes)->

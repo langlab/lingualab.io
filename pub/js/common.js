@@ -18,9 +18,8 @@
     return setInterval(action, someTime);
   };
 
-  Backbone.Model.prototype.connectSocket = Backbone.Collection.prototype.connectSocket = Backbone.View.prototype.connectSocket = function() {
-    var _ref;
-    return (_ref = this.io) != null ? _ref : this.io = window.app.sock;
+  Backbone.Model.prototype.io = Backbone.Collection.prototype.io = Backbone.View.prototype.io = function() {
+    return window.app.sock;
   };
 
   Backbone.View.prototype.open = function(cont) {
@@ -29,6 +28,12 @@
     }
     this.$el.appendTo(cont);
     this.trigger('open', cont);
+    return this;
+  };
+
+  Backbone.View.prototype.render = function() {
+    var _ref;
+    this.$el.html(ck.render(this.template, (_ref = this.model) != null ? _ref : this.collection));
     return this;
   };
 
@@ -842,18 +847,7 @@
   });
 
   module('App', function(exports, top) {
-    var Session, Views;
-    Session = (function(_super) {
-
-      __extends(Session, _super);
-
-      function Session() {
-        return Session.__super__.constructor.apply(this, arguments);
-      }
-
-      return Session;
-
-    })(Backbone.Model);
+    var Views;
     exports.Views = Views = {};
     Views.Main = (function(_super) {
 
@@ -863,7 +857,7 @@
         return Main.__super__.constructor.apply(this, arguments);
       }
 
-      Main.prototype.className = 'main';
+      Main.prototype.className = 'login';
 
       Main.prototype.tagName = 'div';
 
@@ -1010,265 +1004,6 @@
   });
 
   module('App.Lab', function(exports, top) {});
-
-  module('App.File', function(exports, top) {
-    var Collection, Model, Views, _ref;
-    Model = (function(_super) {
-
-      __extends(Model, _super);
-
-      function Model() {
-        return Model.__super__.constructor.apply(this, arguments);
-      }
-
-      return Model;
-
-    })(Backbone.Model);
-    Collection = (function(_super) {
-
-      __extends(Collection, _super);
-
-      function Collection() {
-        return Collection.__super__.constructor.apply(this, arguments);
-      }
-
-      Collection.prototype.model = Model;
-
-      Collection.prototype.url = '/t/files';
-
-      Collection.prototype.initialize = function() {
-        return this.fetch();
-      };
-
-      Collection.prototype.uploadFile = function(file) {
-        var onProgress, onSuccess;
-        onProgress = function(e) {
-          var per;
-          per = Math.round((e.position / e.total) * 100);
-          return console.log('progress: ' + per);
-        };
-        onSuccess = function() {
-          return console.log('upload complete');
-        };
-        return $.upload("/upload", file, {
-          upload: {
-            progress: onProgress
-          },
-          success: onSuccess
-        });
-      };
-
-      return Collection;
-
-    })(Backbone.Collection);
-    exports.Views = Views = {};
-    Views.DragOver = (function(_super) {
-
-      __extends(DragOver, _super);
-
-      function DragOver() {
-        return DragOver.__super__.constructor.apply(this, arguments);
-      }
-
-      DragOver.prototype.dragOver = function(e) {
-        this.$('.upload-place-holder').show();
-        e.originalEvent.dataTransfer.dropEffect = "copy";
-        e.stopPropagation();
-        e.preventDefault();
-        return false;
-      };
-
-      DragOver.prototype.dragEnter = function(e) {
-        console.log('dragenter', $(e.target));
-        if ($(e.target).hasClass('fileList')) {
-          this.$('.upload-place-holder').show();
-          e.stopPropagation();
-          e.preventDefault();
-        }
-        return false;
-      };
-
-      DragOver.prototype.dragLeave = function(e) {
-        console.log('dragleave', $(e.target));
-        if ($(e.target).hasClass('fileList')) {
-          this.$('.upload-place-holder').hide();
-          e.stopPropagation();
-          e.preventDefault();
-        }
-        return false;
-      };
-
-      DragOver.prototype.drop = function(e) {
-        var f, files, i, _i, _len;
-        e.stopPropagation();
-        e.preventDefault();
-        this.$('.upload-place-holder').hide();
-        files = e.originalEvent.dataTransfer.files;
-        i = 0;
-        for (_i = 0, _len = files.length; _i < _len; _i++) {
-          f = files[_i];
-          console.log('uploading ', f);
-          this.collection.uploadFile(f);
-        }
-        return false;
-      };
-
-      return DragOver;
-
-    })(Backbone.View);
-    Views.Browser = (function(_super) {
-
-      __extends(Browser, _super);
-
-      function Browser() {
-        return Browser.__super__.constructor.apply(this, arguments);
-      }
-
-      Browser.prototype.tagName = 'div';
-
-      Browser.prototype.className = 'row';
-
-      Browser.prototype.template = function() {
-        return ul({
-          "class": 'thumbnails'
-        }, function() {
-          var f, _i, _len, _ref, _results;
-          _ref = this.files.models;
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            f = _ref[_i];
-            _results.push(li({
-              "class": 'span3'
-            }, function() {
-              return a({
-                "class": 'thumbnail'
-              }, function() {
-                img({
-                  src: 'http://placehold.it/600x400'
-                });
-                h5("" + (f.get('title')));
-                return p("" + (f.get('localPath')));
-              });
-            }));
-          }
-          return _results;
-        });
-      };
-
-      Browser.prototype.render = function() {
-        this.$el.html(ck.render(this.template, {
-          files: this.collection
-        }));
-        return this;
-      };
-
-      return Browser;
-
-    })(Views.DragOver);
-    Views.List = (function(_super) {
-
-      __extends(List, _super);
-
-      function List() {
-        return List.__super__.constructor.apply(this, arguments);
-      }
-
-      List.prototype.tagName = 'div';
-
-      List.prototype.className = 'fileList';
-
-      List.prototype.id = 'fileList';
-
-      List.prototype.initialize = function() {
-        var _this = this;
-        this.collection.on('add', function(f) {
-          return console.log('added file: ', f);
-        });
-        return this.collection.on('reset', function() {
-          return _this.render();
-        });
-      };
-
-      List.prototype.events = {
-        'click': function(e) {
-          return console.log('click');
-        },
-        'dragenter table': 'dragEnter',
-        'dragleave table': 'dragLeave',
-        'drop table': 'drop'
-      };
-
-      List.prototype.template = function() {
-        return table({
-          "class": 'table'
-        }, function() {
-          thead(function() {
-            return tr(function() {
-              th('Title');
-              th('uploaded');
-              return th('description here...');
-            });
-          });
-          return tbody(function() {
-            var f, _i, _len, _ref;
-            tr({
-              "class": 'upload-place-holder'
-            }, function() {
-              return td({
-                colspan: '3'
-              }, 'drop to upload your file');
-            });
-            _ref = this.files.models;
-            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-              f = _ref[_i];
-              console.log(f);
-              tr(function() {
-                td(f.get('title'));
-                td(moment(f.get('created')).format("MMM D h:mm:ss a"));
-                return td(f.get('localPath'));
-              });
-            }
-            return tr(function() {
-              return td({
-                colspan: '3'
-              }, function() {
-                return form({
-                  action: '/upload',
-                  method: 'post',
-                  enctype: "multipart/form-data"
-                }, function() {
-                  input({
-                    type: 'text',
-                    name: 'title'
-                  });
-                  input({
-                    type: 'file',
-                    name: 'upload'
-                  });
-                  return input({
-                    type: 'submit',
-                    value: 'upload'
-                  });
-                });
-              });
-            });
-          });
-        });
-      };
-
-      List.prototype.render = function() {
-        this.$el.html(ck.render(this.template, {
-          files: this.collection
-        }));
-        this.delegateEvents();
-        return this;
-      };
-
-      return List;
-
-    })(Views.DragOver);
-    return _ref = [Model, Collection], exports.Model = _ref[0], exports.Collection = _ref[1], _ref;
-  });
 
   module('UI', function(exports, top) {
     var Slider;
