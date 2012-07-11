@@ -34,7 +34,7 @@ module.exports =
   ZENCODER:
     API_KEY: 'f5c83bc0ed512a395cb1dff562d6583c'
     API_HOST: "app.zencoder.com"
-    API_PATH: "/api/v2/"
+    API_PATH: "/api/v2/jobs"
 
   DB:
     HOST: 'lingualab.io'

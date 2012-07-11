@@ -9,7 +9,7 @@ module 'App.Teacher', (exports,top)->
 
   class Views.TopBar extends Backbone.View
     tagName: 'div'
-    className: 'navbar navbar-fixed-top'
+    className: 'top-bar navbar navbar-fixed-top'
 
     template: ->
       div class:'navbar-inner', ->
@@ -22,7 +22,17 @@ module 'App.Teacher', (exports,top)->
               a href:'#files', ->
                 i class:'icon-briefcase'
                 text ' Files'
-          span class:'pull-right', "#{@get('name')}"
+          ul class:'nav pull-right', ->
+            li class:'divider-vertical'
+            li class:'dropdown', ->
+              a href:'', class:'dropdown-toggle', 'data-toggle':'dropdown', ->
+                img src:"#{@get('twit').profileImageUrl}"
+                text " #{@get('twit').name} "
+                b class:'caret'
+              ul class:'dropdown-menu', ->
+                li class:'divider'
+                li ->
+                  a href:'/logout', "sign out"
 
     render: ->
       @$el.html ck.render @template, @model
@@ -51,11 +61,11 @@ module 'App.Teacher', (exports,top)->
       @views.topBar.render().open()
 
     home: ->
-      @clearViews()
-      @showTopBar()
+      @clearViews('topBar')
+      @files()
       
     files: ->
-      @showTopBar()
+      @clearViews('topBar')
       @views.filez = new App.File.Views.List { collection: @teacher.files }
       @views.filez.render().open '.main'
 

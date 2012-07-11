@@ -11,6 +11,9 @@ module 'App.File', (exports,top)->
     initialize: ->
       @fetch()
 
+    comparator: ->
+      0 - @get 'created'
+
     fromDB: (data)->
       {method, model, options} = data
       console.log 'updating ',model

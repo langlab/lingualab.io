@@ -35,6 +35,10 @@
         return this.fetch();
       };
 
+      Collection.prototype.comparator = function() {
+        return 0 - this.get('created');
+      };
+
       Collection.prototype.fromDB = function(data) {
         var method, model, options;
         method = data.method, model = data.model, options = data.options;
@@ -335,7 +339,7 @@
 
       TopBar.prototype.tagName = 'div';
 
-      TopBar.prototype.className = 'navbar navbar-fixed-top';
+      TopBar.prototype.className = 'top-bar navbar navbar-fixed-top';
 
       TopBar.prototype.template = function() {
         return div({
@@ -367,9 +371,42 @@
                 });
               });
             });
-            return span({
-              "class": 'pull-right'
-            }, "" + (this.get('name')));
+            return ul({
+              "class": 'nav pull-right'
+            }, function() {
+              li({
+                "class": 'divider-vertical'
+              });
+              return li({
+                "class": 'dropdown'
+              }, function() {
+                a({
+                  href: '',
+                  "class": 'dropdown-toggle',
+                  'data-toggle': 'dropdown'
+                }, function() {
+                  img({
+                    src: "" + (this.get('twit').profileImageUrl)
+                  });
+                  text(" " + (this.get('twit').name) + " ");
+                  return b({
+                    "class": 'caret'
+                  });
+                });
+                return ul({
+                  "class": 'dropdown-menu'
+                }, function() {
+                  li({
+                    "class": 'divider'
+                  });
+                  return li(function() {
+                    return a({
+                      href: '/logout'
+                    }, "sign out");
+                  });
+                });
+              });
+            });
           });
         });
       };
@@ -422,12 +459,12 @@
       };
 
       Router.prototype.home = function() {
-        this.clearViews();
-        return this.showTopBar();
+        this.clearViews('topBar');
+        return this.files();
       };
 
       Router.prototype.files = function() {
-        this.showTopBar();
+        this.clearViews('topBar');
         this.views.filez = new App.File.Views.List({
           collection: this.teacher.files
         });

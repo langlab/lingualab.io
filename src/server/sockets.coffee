@@ -12,7 +12,6 @@ module.exports = (app)->
   
   sio.set 'authorization', (data, accept)->
       # check if there's a cookie header
-      #console.log data.headers
       if (data.headers.cookie)
           
           # if there is, parse the cookie

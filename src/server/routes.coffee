@@ -35,20 +35,13 @@ module.exports = (app)->
 
 
   app.post '/upload', userAuth, (req,res)->
-    console.log 'upload route'
     uploadFile = new File { owner: req.user._id }
     uploadFile.upload req
-    
-    uploadFile.on 'progress', (p)->
-      res.write "#{p}% progress"
-    
-    uploadFile.on 'received', ->
-      res.end JSON.stringify @
+
 
 
   app.get '/file/:name', (req,res)->
     path = "#{__dirname}/upload/#{req.params.name}"
-    console.log path
     if req.query.dl then res.download path else res.sendfile path
 
   app.get '/t/files', userAuth, (req,res)->

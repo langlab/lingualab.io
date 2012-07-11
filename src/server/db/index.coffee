@@ -4,8 +4,7 @@ mongoose = require 'mongoose'
 Schema = mongoose.Schema
 ObjectId = Schema.ObjectId
 
-console.log dbUrl = "mongodb://#{ CFG.DB.HOST }/#{ CFG.DB.NAME }"
-mongoose.connect dbUrl
+mongoose.connect "mongoose://#{CFG.DB.HOST}/#{CFG.DB.NAME}"
 
 mongooseAuth = require 'mongoose-auth'
 _ = require 'underscore'

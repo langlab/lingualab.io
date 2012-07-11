@@ -49,7 +49,7 @@ class watchedProcess
     @cp = spawn @options.cmd, @options.opts
 
     @cp.stdout.on 'data', (data)=> @msgLog(data)
-    @cp.stdout.on 'error', (data)=> @errLog(data)
+    @cp.stderr.on 'data', (data)=> @errLog(data)
     @
 
   restart: ->
