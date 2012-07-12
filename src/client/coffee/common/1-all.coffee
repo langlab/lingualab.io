@@ -24,7 +24,7 @@ Backbone.View::open = (cont = 'body')->
   @
 
 Backbone.View::render = ->
-  @$el.html ck.render @template, @model ? @collection
+  @$el.html ck.render @template, @model ? @collection ? @
   @
 
 Backbone.Router::extendRoutesWith = (xtraRoutes)->

@@ -9,6 +9,8 @@ sty = require 'sty'
 
 _  = require 'underscore'
 
+{EventEmitter} = require 'events'
+
 { spawn } = require 'child_process'
 
 less = require 'less'
@@ -41,7 +43,7 @@ concat = (pathList)->
 
 beep = -> spawn "printf '\a'"
 
-class watchedProcess
+class watchedProcess extends EventEmitter
   
   constructor: (@options)->
 
@@ -132,7 +134,7 @@ watchServer = ->
     dir: "#{__dirname}/server/"
   }
   server.start().watch()
-
+  
 
 task 'dev', 'start coding, compile coffescript and stylus', (options)->
   watchClientCoffee()

@@ -52,21 +52,24 @@
       };
 
       Collection.prototype.uploadFile = function(file) {
-        var onProgress, onSuccess;
+        var onProgress, onSuccess, uplTask;
         onProgress = function(e) {
-          var per;
-          per = Math.round((e.position / e.total) * 100);
-          return console.log('progress: ' + per);
+          var perc;
+          return uplTask.trigger('progress', perc = Math.round((e.position / e.total) * 100));
         };
         onSuccess = function() {
-          return console.log('upload complete');
+          return uplTask.trigger('complete');
         };
-        return $.upload("/upload", file, {
+        uplTask = $.upload("/upload", file, {
           upload: {
             progress: onProgress
           },
           success: onSuccess
         });
+        _.extend(uplTask, Backbone.Events);
+        console.log('upl task', uplTask);
+        uplTask.file = file;
+        return this.trigger('upload:start', uplTask);
       };
 
       return Collection;
@@ -82,7 +85,6 @@
       }
 
       DragOver.prototype.dragOver = function(e) {
-        this.$('.upload-place-holder').show();
         e.originalEvent.dataTransfer.dropEffect = "copy";
         e.stopPropagation();
         e.preventDefault();
@@ -113,7 +115,6 @@
         var f, files, i, _i, _len;
         e.stopPropagation();
         e.preventDefault();
-        this.$('.upload-place-holder').hide();
         files = e.originalEvent.dataTransfer.files;
         i = 0;
         for (_i = 0, _len = files.length; _i < _len; _i++) {
@@ -127,11 +128,174 @@
       return DragOver;
 
     })(Backbone.View);
+    Views.Main = (function(_super) {
+
+      __extends(Main, _super);
+
+      function Main() {
+        return Main.__super__.constructor.apply(this, arguments);
+      }
+
+      Main.prototype.tagName = 'div';
+
+      Main.prototype.className = 'files-main';
+
+      Main.prototype.events = {
+        'click .toggle-list': 'toggleList'
+      };
+
+      Main.prototype.initialize = function() {
+        var _ref, _ref1,
+          _this = this;
+        if ((_ref = this.browser) == null) {
+          this.browser = new Views.Browser({
+            collection: this.collection
+          });
+        }
+        if ((_ref1 = this.list) == null) {
+          this.list = new Views.List({
+            collection: this.collection
+          });
+        }
+        this.currentList = this.list;
+        return this.collection.on('reset', function() {
+          return _this.renderList();
+        });
+      };
+
+      Main.prototype.template = function() {
+        div({
+          "class": 'row'
+        }, function() {
+          span({
+            "class": 'btn-toolbar span2'
+          }, function() {
+            return input({
+              "class": 'search-query',
+              type: 'text',
+              placeholder: 'search'
+            });
+          });
+          return span({
+            "class": 'btn-toolbar span8 pull-right'
+          }, function() {
+            span({
+              classs: 'btn-loose-group'
+            }, function() {
+              a({
+                "class": 'btn tt',
+                rel: 'tooltip',
+                'data-original-title': "you can also add files by dragging them right onto the window!"
+              }, function() {
+                i({
+                  "class": 'icon-info'
+                });
+                return i({
+                  "class": 'icon-hand-up'
+                });
+              });
+              button({
+                "class": 'btn select-upload tt',
+                rel: 'tooltip',
+                'data-original-title': 'upload files from your computer'
+              }, function() {
+                text("+ ");
+                return i({
+                  "class": 'icon-folder-open'
+                });
+              });
+              return button({
+                "class": 'btn internet-upload tt',
+                rel: 'tooltip',
+                'data-original-title': 'find files on the internet to upload'
+              }, function() {
+                text("+ ");
+                return i({
+                  "class": 'icon-cloud'
+                });
+              });
+            });
+            return div({
+              "class": 'btn-group pull-right',
+              'data-toggle': 'buttons-radio'
+            }, function() {
+              button({
+                "class": "btn toggle-list " + (this.currentList === this.browser ? 'active' : '')
+              }, function() {
+                return i({
+                  "class": 'icon-th'
+                });
+              });
+              return button({
+                "class": "btn toggle-list " + (this.currentList === this.list ? 'active' : '')
+              }, function() {
+                return i({
+                  "class": 'icon-list'
+                });
+              });
+            });
+          });
+        });
+        return div({
+          "class": 'files-list row-fluid'
+        }, function() {});
+      };
+
+      Main.prototype.toggleList = function() {
+        console.log('toggle-list');
+        this.currentList.remove();
+        this.currentList = this.currentList === this.browser ? this.list : this.browser;
+        return this.renderList();
+      };
+
+      Main.prototype.renderList = function() {
+        this.currentList.remove();
+        return this.currentList.render().open(this.$('.files-list'));
+      };
+
+      Main.prototype.render = function() {
+        this.$el.html(ck.render(this.template, this));
+        this.renderList();
+        this.$('.tt').tooltip();
+        this.delegateEvents();
+        return this;
+      };
+
+      return Main;
+
+    })(Backbone.View);
+    Views.BrowserItem = (function(_super) {
+
+      __extends(BrowserItem, _super);
+
+      function BrowserItem() {
+        return BrowserItem.__super__.constructor.apply(this, arguments);
+      }
+
+      BrowserItem.prototype.tagName = 'li';
+
+      BrowserItem.prototype.className = 'browser-item span3';
+
+      BrowserItem.prototype.template = function() {
+        return a({
+          "class": 'thumbnail'
+        }, function() {
+          img({
+            src: 'http://placehold.it/100x100'
+          });
+          return h5("" + (this.get('title')));
+        });
+      };
+
+      return BrowserItem;
+
+    })(Backbone.View);
     Views.Browser = (function(_super) {
 
       __extends(Browser, _super);
 
       function Browser() {
+        this.addItem = __bind(this.addItem, this);
         return Browser.__super__.constructor.apply(this, arguments);
       }
 
@@ -142,34 +306,28 @@
       Browser.prototype.template = function() {
         return ul({
           "class": 'thumbnails'
-        }, function() {
-          var f, _i, _len, _ref, _results;
-          _ref = this.files.models;
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            f = _ref[_i];
-            _results.push(li({
-              "class": 'span3'
-            }, function() {
-              return a({
-                "class": 'thumbnail'
-              }, function() {
-                img({
-                  src: 'http://placehold.it/600x400'
-                });
-                h5("" + (f.get('title')));
-                return p("" + (f.get('localPath')));
-              });
-            }));
-          }
-          return _results;
-        });
+        }, function() {});
+      };
+
+      Browser.prototype.addItem = function(f) {
+        var _ref;
+        if ((_ref = f.brItemView) == null) {
+          f.brItemView = new Views.BrowserItem({
+            model: f
+          });
+        }
+        f.brItemView.render().open(this.$('ul.thumbnails'));
+        return this;
       };
 
       Browser.prototype.render = function() {
-        this.$el.html(ck.render(this.template, {
-          files: this.collection
-        }));
+        var f, _i, _len, _ref;
+        this.$el.html(ck.render(this.template));
+        _ref = this.collection.models;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          f = _ref[_i];
+          this.addItem(f);
+        }
         return this;
       };
 
@@ -189,7 +347,6 @@
       ListItem.prototype.className = 'file-list-item';
 
       ListItem.prototype.template = function() {
-        console.log(this);
         td(this.get('title'));
         td(this.get('status'));
         td(moment(this.get('created')).format("MMM D h:mm:ss a"));
@@ -197,6 +354,57 @@
       };
 
       return ListItem;
+
+    })(Backbone.View);
+    Views.UploadProgress = (function(_super) {
+
+      __extends(UploadProgress, _super);
+
+      function UploadProgress() {
+        return UploadProgress.__super__.constructor.apply(this, arguments);
+      }
+
+      UploadProgress.prototype.tagName = 'tr';
+
+      UploadProgress.prototype.className = 'uplaod-progress';
+
+      UploadProgress.prototype.initialize = function() {
+        var _this = this;
+        console.log('new upl task model: ', this.model);
+        this.model.on('progress', function(perc) {
+          _this.setPercentTo(perc);
+          if (perc === 100) {
+            return _this.remove();
+          }
+        });
+        return this.model.on('success', function() {
+          return _this.remove();
+        });
+      };
+
+      UploadProgress.prototype.template = function() {
+        td({
+          colspan: '1'
+        }, "" + this.name);
+        return td({
+          colspan: '3'
+        }, function() {
+          return div({
+            "class": 'progress upload-progress'
+          }, function() {
+            return div({
+              "class": 'bar'
+            });
+          });
+        });
+      };
+
+      UploadProgress.prototype.setPercentTo = function(p) {
+        this.$('.bar').width("" + p + "%");
+        return this;
+      };
+
+      return UploadProgress;
 
     })(Backbone.View);
     Views.List = (function(_super) {
@@ -218,15 +426,18 @@
         this.collection.on('change', function(f) {
           return f.listItemView.render();
         });
-        return this.collection.on('reset', function() {
+        this.collection.on('reset', function() {
           return _this.render();
+        });
+        return this.collection.on('upload:start', function(task) {
+          task.view = new Views.UploadProgress({
+            model: task
+          });
+          return task.view.render().open(_this.$('thead'));
         });
       };
 
       List.prototype.events = {
-        'click': function(e) {
-          return console.log('click');
-        },
         'dragenter table': 'dragEnter',
         'dragleave table': 'dragLeave',
         'drop table': 'drop'
@@ -234,50 +445,11 @@
 
       List.prototype.template = function() {
         return table({
-          "class": 'table'
+          "class": 'table table-fluid span12'
         }, function() {
-          thead(function() {
-            tr(function() {
-              th('Title');
-              th('');
-              th('uploaded');
-              return th('description here...');
-            });
-            return tr({
-              "class": 'upload-place-holder'
-            }, function() {
-              return td({
-                colspan: '4'
-              }, 'drop to upload your file');
-            });
-          });
+          thead(function() {});
           tbody(function() {});
-          return tfoot(function() {
-            return tr(function() {
-              return td({
-                colspan: '4'
-              }, function() {
-                return form({
-                  action: '/upload',
-                  method: 'post',
-                  enctype: "multipart/form-data"
-                }, function() {
-                  input({
-                    type: 'text',
-                    name: 'title'
-                  });
-                  input({
-                    type: 'file',
-                    name: 'upload'
-                  });
-                  return input({
-                    type: 'submit',
-                    value: 'upload'
-                  });
-                });
-              });
-            });
-          });
+          return tfoot(function() {});
         });
       };
 
@@ -293,7 +465,7 @@
       };
 
       List.prototype.render = function() {
-        var f, _i, _len, _ref;
+        var f, input, upl, _i, _len, _ref;
         console.log(this.collection);
         this.$el.html(ck.render(this.template, this.collection));
         _ref = this.collection.models;
@@ -301,6 +473,19 @@
           f = _ref[_i];
           this.addItem(f);
         }
+        upl = this.collection.uploadFile;
+        input = this.$('.select-upload').browseElement();
+        input.on('change', function(e) {
+          var _j, _len1, _ref1, _results;
+          _ref1 = e.target.files;
+          _results = [];
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            f = _ref1[_j];
+            console.log('uploading ', f);
+            _results.push(upl(f));
+          }
+          return _results;
+        });
         this.delegateEvents();
         return this;
       };
@@ -320,10 +505,6 @@
       function Model() {
         return Model.__super__.constructor.apply(this, arguments);
       }
-
-      Model.prototype.initialize = function() {
-        return this.files = new App.File.Collection(this.get('files'));
-      };
 
       return Model;
 
@@ -357,52 +538,73 @@
               });
               return span(' lingualab.io');
             });
-            ul({
-              "class": 'nav'
+            a({
+              "class": 'btn btn-navbar',
+              'data-toggle': 'collapse',
+              'data-target': '.nav-collapse'
             }, function() {
-              return li(function() {
-                return a({
-                  href: '#files'
-                }, function() {
-                  i({
-                    "class": 'icon-briefcase'
-                  });
-                  return text(' Files');
-                });
+              span({
+                "class": 'icon-beaker icon-large'
+              });
+              return span({
+                "class": 'icon-reorder icon-large'
               });
             });
-            return ul({
-              "class": 'nav pull-right'
+            return div({
+              "class": 'nav-collapse'
             }, function() {
-              li({
-                "class": 'divider-vertical'
-              });
-              return li({
-                "class": 'dropdown'
+              ul({
+                "class": 'nav'
               }, function() {
-                a({
-                  href: '',
-                  "class": 'dropdown-toggle',
-                  'data-toggle': 'dropdown'
-                }, function() {
-                  img({
-                    src: "" + (this.get('twit').profileImageUrl)
-                  });
-                  text(" " + (this.get('twit').name) + " ");
-                  return b({
-                    "class": 'caret'
+                return li(function() {
+                  return a({
+                    href: '#files'
+                  }, function() {
+                    i({
+                      "class": 'icon-briefcase'
+                    });
+                    return text(' Files');
                   });
                 });
-                return ul({
-                  "class": 'dropdown-menu'
+              });
+              return ul({
+                "class": 'nav pull-right'
+              }, function() {
+                li({
+                  "class": 'divider-vertical'
+                });
+                return li({
+                  "class": 'dropdown'
                 }, function() {
-                  li({
-                    "class": 'divider'
+                  a({
+                    href: '',
+                    "class": 'dropdown-toggle',
+                    'data-toggle': 'dropdown'
+                  }, function() {
+                    img({
+                      src: "" + (this.get('twit').profileImageUrl)
+                    });
+                    text(" " + (this.get('twit').name) + " ");
+                    return b({
+                      "class": 'caret'
+                    });
                   });
-                  return li(function() {
-                    return a({
-                      href: '/logout'
-                    }, "sign out");
+                  return ul({
+                    "class": 'dropdown-menu'
+                  }, function() {
+                    li({
+                      "class": 'divider'
+                    });
+                    return li(function() {
+                      return a({
+                        href: '/logout'
+                      }, function() {
+                        i({
+                          "class": 'icon-signout'
+                        });
+                        return text(" sign out");
+                      });
+                    });
                   });
                 });
               });
@@ -430,11 +632,21 @@
       Router.prototype.initialize = function() {
         this.extendRoutesWith(this.teacherRoutes);
         this.teacher = new Model(top.app.session.user);
+        this.filez = new top.App.File.Collection(this.teacher.get('files'));
+        this.views = {
+          topBar: new Views.TopBar({
+            model: this.teacher
+          }),
+          filez: new App.File.Views.Main({
+            collection: this.filez
+          })
+        };
         this.fromDB();
         return this.showTopBar();
       };
 
       Router.prototype.teacherRoutes = {
+        '/': 'home',
         'files': 'files'
       };
 
@@ -449,25 +661,17 @@
       };
 
       Router.prototype.showTopBar = function() {
-        var _base, _ref;
-        if ((_ref = (_base = this.views).topBar) == null) {
-          _base.topBar = new Views.TopBar({
-            model: this.teacher
-          });
-        }
         return this.views.topBar.render().open();
       };
 
       Router.prototype.home = function() {
-        this.clearViews('topBar');
-        return this.files();
+        console.log('home route');
+        return this.clearViews('topBar');
       };
 
       Router.prototype.files = function() {
+        console.log('files route');
         this.clearViews('topBar');
-        this.views.filez = new App.File.Views.List({
-          collection: this.teacher.files
-        });
         return this.views.filez.render().open('.main');
       };
 

@@ -6,8 +6,9 @@ mongoose = require 'mongoose'
 Schema = mongoose.Schema
 ObjectId = Schema.ObjectId
 CFG = require './../config'
-console.log CFG
 https = require 'https'
+
+Zencoder = require './zen'
 
 {EventEmitter} = require 'events'
 
@@ -31,84 +32,6 @@ wait = (someTime,thenDo) ->
   setTimeout thenDo, someTime
 doEvery = (someTime,action)->
   setInterval action, someTime
-
-
-class Zencoder extends EventEmitter
-
-  constructor: (@file)->
-    
-    if @file.type is 'video'
-      output = [
-        {
-          format: 'mp4'
-          video_codec: 'h264'
-        }
-        {
-          format: 'webm'
-          video_codec: 'vp8'
-        }
-      ]
-    else if @file.type is 'audio'
-      output = [
-        {
-          format: 'mp3'
-        }
-      ]
-
-
-    output = _.filter output, (o)=>
-      o.url = "s3://#{CFG.S3.MEDIA_BUCKET}/#{@file._id}.#{o.format}"
-      o.public = 1
-      o.format isnt @file.ext
-    
-    if @file.type is 'video'
-      output.thumbnails = { interval: 10 }
-
-    @jobBody = 
-      input: "s3://#{CFG.S3.MEDIA_BUCKET}/#{@file._id}.#{@file.ext}"
-      output: output
-
-  startCheckingStatus: =>
-    @statusChecker = doEvery 1000, @getJobStatus
-
-  stopCheckingStatus: ->
-    cancelTimeout @statusChecker
-
-  getJobStatus: =>
-
-    options =
-      host: CFG.ZENCODER.API_HOST
-      path: "/api/v2/jobs/#{@job.id}/progress.json?api_key=#{}"
-
-    https.get options, (resp)=>
-      resp.on 'data', (prog)=>
-        @job.progress = prog
-        eventType = if prog.state is 'finished' then 'finished' else 'progress'
-        @emit eventType, @job
-
-
-  encode: ->
-
-    options =
-      host: CFG.ZENCODER.API_HOST
-      path: CFG.ZENCODER.API_PATH
-      method: 'POST'
-      headers:
-        'Content-type':'application/json'
-        'Content-length': JSON.stringify(@jobBody).length
-        'Accept': 'application/json'
-        'Zencoder-Api-Key': CFG.ZENCODER.API_KEY
-
-    jobCreate = https.request options, (resp)=>
-      resp.on 'data', (@job)=>
-      resp.on 'end', @startCheckingStatus()
-
-    jobCreate.end JSON.stringify @jobBody, 'utf8'
-
-    
-
-
-
 
 
 FileSchema = new Schema {
@@ -140,9 +63,10 @@ FileSchema.methods =
     files = {}
     fields = {}
 
+
     f.on 'progress', (br, be)=>
       # console.log "#{br*100/be }% recvd"
-      @emit 'progress', (br*100/be)
+      # @emit 'progress', (br*100/be)
 
     f.on 'field', (field, value)->
       # console.log field, value
@@ -182,11 +106,13 @@ FileSchema.methods =
     zencoder = new Zencoder @
     zencoder.encode()
     zencoder.on 'progress', (job)=>
+      console.log 'zen prog'
       @status = { action: 'converting', progress: job.progress.progress }
-      @save (err)=> report 'file:sync', { method: 'status', model: @ }
+      @save (err)=> @report 'file:sync', { method: 'status', model: @ }
     zencoder.on 'finished', (job)=>
+      console.log 'zen fin'
       @status = 'ready'
-      @save (err)=> report 'file:sync', { method: 'status', model: @ }
+      @save (err)=> @report 'file:sync', { method: 'status', model: @ }
 
 
   report: (ev,data)->

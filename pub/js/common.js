@@ -32,8 +32,8 @@
   };
 
   Backbone.View.prototype.render = function() {
-    var _ref;
-    this.$el.html(ck.render(this.template, (_ref = this.model) != null ? _ref : this.collection));
+    var _ref, _ref1;
+    this.$el.html(ck.render(this.template, (_ref = (_ref1 = this.model) != null ? _ref1 : this.collection) != null ? _ref : this));
     return this;
   };
 
