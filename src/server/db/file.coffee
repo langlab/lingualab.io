@@ -55,6 +55,7 @@ FileSchema.methods =
   needsConverting: ->
     @type in ['video','audio']
 
+  # receive the upload from the request, then pass off to processing
   upload: (req)->
     f = new formidable.IncomingForm()
     f.keepExtensions = true
@@ -101,7 +102,7 @@ FileSchema.methods =
         @report 'file:sync', { method: 'status', model: @ }
         @convert() if @needsConverting()
           
-
+  # send media files to Zencoder  
   convert: ->
     zencoder = new Zencoder @
     zencoder.encode()
@@ -114,7 +115,7 @@ FileSchema.methods =
       @status = 'ready'
       @save (err)=> @report 'file:sync', { method: 'status', model: @ }
 
-
+  # send information to client through websockets
   report: (ev,data)->
     @model('file').sio.sockets.in(@owner).emit ev, data
 
@@ -125,6 +126,44 @@ FileSchema.statics =
 
   getAllForUser: (userId,cb)->
     @find({owner: userId}).run cb
+
+  # receive sync messages from client-side Backbone models
+  sync: (data, cb)->
+
+    { method, model, options, userId } = data
+
+    switch method
+      
+      when 'read'
+        if (id = model._id)
+          @findById id, (err,model)=>
+            cb err, model
+        else
+          @find (err,model)=>
+            cb err, model
+
+      when 'read-user'
+        @getForUser userId, (err,myModels)=>
+          cb err,myModels
+
+      when 'update'
+        @findById model._id, (err,modelToUpdate)=>
+          delete model._id
+          delete model._user
+          _.extend modelToUpdate, model
+          modelToUpdate.save (err)=>
+            cb err,modelToUpdate
+
+      when 'create'
+        newModel = new Model model
+        newModel.save (err)=>
+          cb err, newModel
+
+
+      when 'delete'
+        @findById model._id, (err,modelToDelete)=>
+          modelToDelete.remove (err)=>
+            cb err
 
 
 module.exports = FileSchema

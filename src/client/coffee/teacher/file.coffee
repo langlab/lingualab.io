@@ -7,19 +7,26 @@ module 'App.File', (exports,top)->
     iconHash: {
       video: 'facetime-video'
       image: 'picture'
+      pdf: 'file'
+      audio: 'volume-up'
     }
 
     thumbnail: ->
+      console.log @get('type'),@get('ext')
       @thumbnailUrl ?= do =>
         switch @get 'type'
           when 'video'
             "#{@thumbBase}/#{@id}_0001.png"
           when 'image'
             "#{@thumbBase}/#{@id}.#{@get 'ext'}"
+          when 'audio'
+            "/img/mp3.png"
+          when 'application'
+            if (@get('ext') is 'pdf') then "/img/pdf.png"
           else 'http://placehold.it/100x100'
 
     icon: ->
-      @iconHash[@get('type')]
+      if (@get('type') is 'application') then @iconHash[@get('ext')] else @iconHash[@get('type')]
 
 
 
@@ -32,6 +39,11 @@ module 'App.File', (exports,top)->
 
     comparator: ->
       0 - @get 'created'
+
+    filteredBy: (searchTerm)->
+      @filter (m)->
+        re = new RegExp searchTerm, 'i'
+        re.test m.get('title')
 
     fromDB: (data)->
       {method, model, options} = data
@@ -60,6 +72,10 @@ module 'App.File', (exports,top)->
       
       # trigger out the task so that event handlers can be attached by whatever cares
       @trigger 'upload:start', uplTask
+
+
+
+
 
   exports.Views = Views = {}
 
@@ -107,15 +123,16 @@ module 'App.File', (exports,top)->
       'dragleave': 'dragLeave'
       'drop': 'drop'
 
-      'keyup search-query':'doSearch'
-
+      'keyup .search-query': (e)->
+        clearTimeout @searchWait
+        @searchWait = wait 200, => @currentList.doSearch($(e.target).val())
 
 
     initialize: ->
       @browser ?= new Views.Browser { collection: @collection }
       @list ?= new Views.List { collection: @collection }
 
-      @currentList = @list
+      @currentList = @browser
 
       @collection.on 'reset', =>
         @renderList()
@@ -156,6 +173,7 @@ module 'App.File', (exports,top)->
       div class:'files-list', ->
 
     doSearch: ->
+      console.log 'searching!!!'
 
 
     toggleList: ->
@@ -200,6 +218,8 @@ module 'App.File', (exports,top)->
       @$('.bar').width "#{p}%"
       @
 
+
+
   # icon-browser sub-view
   class Views.Browser extends Backbone.View
     tagName: 'div'
@@ -212,6 +232,8 @@ module 'App.File', (exports,top)->
 
       @collection.on 'reset', => @render()
 
+    doSearch: (@searchTerm)->
+      @render()
 
     template: ->
       ul class:'thumbnails', ->
@@ -223,7 +245,7 @@ module 'App.File', (exports,top)->
 
     render: ->
       @$el.html ck.render @template
-      for f in @collection.models
+      for f in (if @searchTerm then @collection.filteredBy(@searchTerm) else @collection.models)
         @addItem f
       @
 
@@ -240,6 +262,9 @@ module 'App.File', (exports,top)->
       @collection.on 'reset', => @render()
 
 
+    doSearch: (@searchTerm)->
+      @render()
+
     template: ->
       table class:'table table-fluid span12', ->
         thead ->
@@ -248,14 +273,14 @@ module 'App.File', (exports,top)->
           
 
     addItem: (f)=>
+      f.listItemView?.remove()
       f.listItemView ?= new Views.ListItem { model: f }
       f.listItemView.render().open @$('tbody')
       @
     
     render: ->
-      console.log @collection
       @$el.html ck.render @template, @collection
-      @addItem f for f in @collection.models
+      @addItem f for f in (if @searchTerm then @collection.filteredBy(@searchTerm) else @collection.models)
 
       upl = @collection.uploadFile
       input = @$('.select-upload').browseElement()
@@ -268,39 +293,55 @@ module 'App.File', (exports,top)->
       @
 
 
-  # just the thumbnail part of the view
-  class Views.Thumnbail extends Backbone.View
-    tagName: 'span'
-    className: 'file-icon'
 
-    template: ->
-      img src:"#{@thumbnail()}"
 
   # single items in a list
   class Views.ListItem extends Backbone.View
     tagName: 'tr'
     className: 'file-list-item'
 
+    events:
+      'change .title': (e)->
+        @model.save({ title: $(e.target).val() })
+
     template: ->
-      td @get('title')
-      td @get('status')
+      td -> i class:"icon-#{@icon()} icon-large"
+      td -> input class:'title', value:"#{ @get('title') }"
       td moment(@get('created')).format("MMM D h:mm:ss a")
-      td @get('localPath')
+      td -> input class:'tags', value:"#{ @get 'tags' }"
+
+    render: ->
+      @delegateEvents()
+      super()
 
   # single icon items in the browser view
   class Views.BrowserItem extends Backbone.View
     tagName: 'li'
     className: 'browser-item span3'
 
+    events:
+      'change .title': (e)->
+        @model.save({ title: $(e.target).val() })
+
     template: ->
-      div class:'thumbnail', ->
+      div class:"thumbnail #{@get 'type'}", ->
         img src:"#{@thumbnail()}"
-        div class:'item-info caption', ->
-          h5 ->
-            i class:"icon-#{@icon()}"
-            text " #{ @get('title') }"
+        i class:"icon-#{@icon()} icon-large file-type-icon"
+      div class:'item-info caption', ->
+        input class:'title', value:"#{ @get('title') }"
+
+    render: ->
+      super()
+      @delegateEvents()
+      @
 
 
+  class Views.Detail extends Backbone.View
+    tagName: 'div'
+    className: 'file-video-detail'
+
+    template: ->
+      video 
  
 
   [exports.Model,exports.Collection] = [Model, Collection]

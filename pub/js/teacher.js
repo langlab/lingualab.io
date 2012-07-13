@@ -20,18 +20,28 @@
 
       Model.prototype.iconHash = {
         video: 'facetime-video',
-        image: 'picture'
+        image: 'picture',
+        pdf: 'file',
+        audio: 'volume-up'
       };
 
       Model.prototype.thumbnail = function() {
         var _ref,
           _this = this;
+        console.log(this.get('type'), this.get('ext'));
         return (_ref = this.thumbnailUrl) != null ? _ref : this.thumbnailUrl = (function() {
           switch (_this.get('type')) {
             case 'video':
               return "" + _this.thumbBase + "/" + _this.id + "_0001.png";
             case 'image':
               return "" + _this.thumbBase + "/" + _this.id + "." + (_this.get('ext'));
+            case 'audio':
+              return "/img/mp3.png";
+            case 'application':
+              if (_this.get('ext') === 'pdf') {
+                return "/img/pdf.png";
+              }
+              break;
             default:
               return 'http://placehold.it/100x100';
           }
@@ -39,7 +49,11 @@
       };
 
       Model.prototype.icon = function() {
-        return this.iconHash[this.get('type')];
+        if (this.get('type') === 'application') {
+          return this.iconHash[this.get('ext')];
+        } else {
+          return this.iconHash[this.get('type')];
+        }
       };
 
       return Model;
@@ -63,6 +77,14 @@
 
       Collection.prototype.comparator = function() {
         return 0 - this.get('created');
+      };
+
+      Collection.prototype.filteredBy = function(searchTerm) {
+        return this.filter(function(m) {
+          var re;
+          re = new RegExp(searchTerm, 'i');
+          return re.test(m.get('title'));
+        });
       };
 
       Collection.prototype.fromDB = function(data) {
@@ -165,7 +187,13 @@
         'dragenter': 'dragEnter',
         'dragleave': 'dragLeave',
         'drop': 'drop',
-        'keyup search-query': 'doSearch'
+        'keyup .search-query': function(e) {
+          var _this = this;
+          clearTimeout(this.searchWait);
+          return this.searchWait = wait(200, function() {
+            return _this.currentList.doSearch($(e.target).val());
+          });
+        }
       };
 
       Main.prototype.initialize = function() {
@@ -181,7 +209,7 @@
             collection: this.collection
           });
         }
-        this.currentList = this.list;
+        this.currentList = this.browser;
         this.collection.on('reset', function() {
           return _this.renderList();
         });
@@ -271,7 +299,9 @@
         }, function() {});
       };
 
-      Main.prototype.doSearch = function() {};
+      Main.prototype.doSearch = function() {
+        return console.log('searching!!!');
+      };
 
       Main.prototype.toggleList = function() {
         console.log('toggle-list');
@@ -371,6 +401,11 @@
         });
       };
 
+      Browser.prototype.doSearch = function(searchTerm) {
+        this.searchTerm = searchTerm;
+        return this.render();
+      };
+
       Browser.prototype.template = function() {
         return ul({
           "class": 'thumbnails'
@@ -391,7 +426,7 @@
       Browser.prototype.render = function() {
         var f, _i, _len, _ref;
         this.$el.html(ck.render(this.template));
-        _ref = this.collection.models;
+        _ref = (this.searchTerm ? this.collection.filteredBy(this.searchTerm) : this.collection.models);
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           f = _ref[_i];
           this.addItem(f);
@@ -426,6 +461,11 @@
         });
       };
 
+      List.prototype.doSearch = function(searchTerm) {
+        this.searchTerm = searchTerm;
+        return this.render();
+      };
+
       List.prototype.template = function() {
         return table({
           "class": 'table table-fluid span12'
@@ -437,8 +477,11 @@
       };
 
       List.prototype.addItem = function(f) {
-        var _ref;
-        if ((_ref = f.listItemView) == null) {
+        var _ref, _ref1;
+        if ((_ref = f.listItemView) != null) {
+          _ref.remove();
+        }
+        if ((_ref1 = f.listItemView) == null) {
           f.listItemView = new Views.ListItem({
             model: f
           });
@@ -449,9 +492,8 @@
 
       List.prototype.render = function() {
         var f, input, upl, _i, _len, _ref;
-        console.log(this.collection);
         this.$el.html(ck.render(this.template, this.collection));
-        _ref = this.collection.models;
+        _ref = (this.searchTerm ? this.collection.filteredBy(this.searchTerm) : this.collection.models);
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           f = _ref[_i];
           this.addItem(f);
@@ -476,27 +518,6 @@
       return List;
 
     })(Backbone.View);
-    Views.Thumnbail = (function(_super) {
-
-      __extends(Thumnbail, _super);
-
-      function Thumnbail() {
-        return Thumnbail.__super__.constructor.apply(this, arguments);
-      }
-
-      Thumnbail.prototype.tagName = 'span';
-
-      Thumnbail.prototype.className = 'file-icon';
-
-      Thumnbail.prototype.template = function() {
-        return img({
-          src: "" + (this.thumbnail())
-        });
-      };
-
-      return Thumnbail;
-
-    })(Backbone.View);
     Views.ListItem = (function(_super) {
 
       __extends(ListItem, _super);
@@ -509,11 +530,38 @@
 
       ListItem.prototype.className = 'file-list-item';
 
+      ListItem.prototype.events = {
+        'change .title': function(e) {
+          return this.model.save({
+            title: $(e.target).val()
+          });
+        }
+      };
+
       ListItem.prototype.template = function() {
-        td(this.get('title'));
-        td(this.get('status'));
+        td(function() {
+          return i({
+            "class": "icon-" + (this.icon()) + " icon-large"
+          });
+        });
+        td(function() {
+          return input({
+            "class": 'title',
+            value: "" + (this.get('title'))
+          });
+        });
         td(moment(this.get('created')).format("MMM D h:mm:ss a"));
-        return td(this.get('localPath'));
+        return td(function() {
+          return input({
+            "class": 'tags',
+            value: "" + (this.get('tags'))
+          });
+        });
+      };
+
+      ListItem.prototype.render = function() {
+        this.delegateEvents();
+        return ListItem.__super__.render.call(this);
       };
 
       return ListItem;
@@ -531,27 +579,61 @@
 
       BrowserItem.prototype.className = 'browser-item span3';
 
+      BrowserItem.prototype.events = {
+        'change .title': function(e) {
+          return this.model.save({
+            title: $(e.target).val()
+          });
+        }
+      };
+
       BrowserItem.prototype.template = function() {
-        return div({
-          "class": 'thumbnail'
+        div({
+          "class": "thumbnail " + (this.get('type'))
         }, function() {
           img({
             src: "" + (this.thumbnail())
           });
-          return div({
-            "class": 'item-info caption'
-          }, function() {
-            return h5(function() {
-              i({
-                "class": "icon-" + (this.icon())
-              });
-              return text(" " + (this.get('title')));
-            });
+          return i({
+            "class": "icon-" + (this.icon()) + " icon-large file-type-icon"
+          });
+        });
+        return div({
+          "class": 'item-info caption'
+        }, function() {
+          return input({
+            "class": 'title',
+            value: "" + (this.get('title'))
           });
         });
       };
 
+      BrowserItem.prototype.render = function() {
+        BrowserItem.__super__.render.call(this);
+        this.delegateEvents();
+        return this;
+      };
+
       return BrowserItem;
+
+    })(Backbone.View);
+    Views.Detail = (function(_super) {
+
+      __extends(Detail, _super);
+
+      function Detail() {
+        return Detail.__super__.constructor.apply(this, arguments);
+      }
+
+      Detail.prototype.tagName = 'div';
+
+      Detail.prototype.className = 'file-video-detail';
+
+      Detail.prototype.template = function() {
+        return video;
+      };
+
+      return Detail;
 
     })(Backbone.View);
     return _ref = [Model, Collection], exports.Model = _ref[0], exports.Collection = _ref[1], _ref;

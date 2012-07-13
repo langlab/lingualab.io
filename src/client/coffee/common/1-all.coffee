@@ -16,7 +16,12 @@ w.doEvery = (someTime,action)->
 # include the socket connection in every Model and View
 
 Backbone.Model::io = Backbone.Collection::io = Backbone.View::io = ->
-  window.app.sock
+  @_io ?= window.app.sock
+
+Backbone.Model::sync = Backbone.Collection::sync = (method, model, options)->
+  @io().emit 'file', { method: method, model: model, options: options }, (err, resp)->
+    if err then options.error err
+    else options.success resp
 
 Backbone.View::open = (cont = 'body')->
   @$el.appendTo cont

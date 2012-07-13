@@ -19,7 +19,22 @@
   };
 
   Backbone.Model.prototype.io = Backbone.Collection.prototype.io = Backbone.View.prototype.io = function() {
-    return window.app.sock;
+    var _ref;
+    return (_ref = this._io) != null ? _ref : this._io = window.app.sock;
+  };
+
+  Backbone.Model.prototype.sync = Backbone.Collection.prototype.sync = function(method, model, options) {
+    return this.io().emit('file', {
+      method: method,
+      model: model,
+      options: options
+    }, function(err, resp) {
+      if (err) {
+        return options.error(err);
+      } else {
+        return options.success(resp);
+      }
+    });
   };
 
   Backbone.View.prototype.open = function(cont) {

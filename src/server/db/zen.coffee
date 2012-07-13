@@ -44,7 +44,8 @@ class Zencoder extends EventEmitter
           number: 10
           base_url: "s3://#{CFG.S3.MEDIA_BUCKET}/"
           prefix: "#{@file._id}"
-          width: 400
+          size: "400x400"
+          aspect_mode: 'pad'
 
     @jobReq = 
       input: "s3://#{CFG.S3.MEDIA_BUCKET}/#{@file._id}.#{@file.ext}"
@@ -67,7 +68,7 @@ class Zencoder extends EventEmitter
     https.get options, (resp)=>
       resp.setEncoding 'utf8'
       resp.on 'data', (prog)=>
-        @job.progress = prog.progress
+        @job.progress = prog
         eventType = if prog.state is 'finished' then 'finished' else 'progress'
         @emit eventType, @job
         if eventType is 'finished' then @stopCheckingStatus()
