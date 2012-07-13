@@ -38,6 +38,11 @@ module.exports = (app)->
     uploadFile = new File { owner: req.user._id }
     uploadFile.upload req
 
+  app.get '/hello', (req, res)->
+    for i in [1..1000]
+      res.write "<div>#{i}</div>"
+    res.end()
+
 
 
   app.get '/file/:name', (req,res)->

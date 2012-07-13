@@ -44,7 +44,7 @@ FileSchema = new Schema {
   type: String
   mime: String
   size: Number
-  status: String
+  status: {}
 }
 
 FileSchema.methods =
@@ -106,11 +106,11 @@ FileSchema.methods =
     zencoder = new Zencoder @
     zencoder.encode()
     zencoder.on 'progress', (job)=>
-      console.log 'zen prog'
-      @status = { action: 'converting', progress: job.progress.progress }
+      #console.log 'zen prog',util.inspect job
+      @status = { action: 'converting', progress: job.progress }
       @save (err)=> @report 'file:sync', { method: 'status', model: @ }
     zencoder.on 'finished', (job)=>
-      console.log 'zen fin'
+      #console.log 'zen fin'
       @status = 'ready'
       @save (err)=> @report 'file:sync', { method: 'status', model: @ }
 

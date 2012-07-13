@@ -31,6 +31,16 @@ body {
 .files-main .hdr {
   margin-bottom: 10px;
 }
+.files-main .browser-item {
+  height: 200px;
+  white-space: nowrap;
+}
+.files-main .item-info {
+  position: relative;
+  left: 3px;
+  right: 3px;
+  overflow-x: hidden;
+}
 .files-main .navbar,
 .files-main .navbar-inner {
   background-color: transparent;

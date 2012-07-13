@@ -3,6 +3,25 @@ module 'App.File', (exports,top)->
 
   class Model extends Backbone.Model
     idAttribute: '_id'
+    thumbBase: "http://s3.amazonaws.com/lingualabio-media"
+    iconHash: {
+      video: 'facetime-video'
+      image: 'picture'
+    }
+
+    thumbnail: ->
+      @thumbnailUrl ?= do =>
+        switch @get 'type'
+          when 'video'
+            "#{@thumbBase}/#{@id}_0001.png"
+          when 'image'
+            "#{@thumbBase}/#{@id}.#{@get 'ext'}"
+          else 'http://placehold.it/100x100'
+
+    icon: ->
+      @iconHash[@get('type')]
+
+
 
   class Collection extends Backbone.Collection
     model: Model
@@ -44,6 +63,7 @@ module 'App.File', (exports,top)->
 
   exports.Views = Views = {}
 
+  # view with dragover functionality to inherit from
   class Views.DragOver extends Backbone.View
 
     dragOver: (e)->
@@ -54,18 +74,14 @@ module 'App.File', (exports,top)->
 
     dragEnter: (e)->
       console.log 'dragenter',$(e.target)
-      if $(e.target).hasClass('fileList')
-        @$('.upload-place-holder').show()
-        e.stopPropagation()
-        e.preventDefault()
+      e.stopPropagation()
+      e.preventDefault()
       false
 
     dragLeave: (e)->
       console.log 'dragleave', $(e.target)
-      if $(e.target).hasClass('fileList')
-        @$('.upload-place-holder').hide()
-        e.stopPropagation()
-        e.preventDefault()
+      e.stopPropagation()
+      e.preventDefault()
       false
         
     drop: (e)->
@@ -79,12 +95,19 @@ module 'App.File', (exports,top)->
       return false
 
 
-  class Views.Main extends Backbone.View
+  # main file view, controls other list/browse sub-views
+  class Views.Main extends Views.DragOver
     tagName: 'div'
     className: 'files-main'
 
     events:
       'click .toggle-list':'toggleList'
+      'dragenter': 'dragEnter'
+      #'dragover': 'dragOver'
+      'dragleave': 'dragLeave'
+      'drop': 'drop'
+
+      'keyup search-query':'doSearch'
 
 
 
@@ -96,17 +119,22 @@ module 'App.File', (exports,top)->
 
       @collection.on 'reset', =>
         @renderList()
+
+      # when ever an upload starts, get the task and make a progress view for it
+      @collection.on 'upload:start', (task)=>
+        task.view = new Views.UploadProgress { model: task }
+        task.view.render().$el.prependTo @$el
         
 
     template: ->
           
       div class:'row', ->
-        span class:'btn-toolbar span2', ->
-          input class:'search-query', type:'text', placeholder:'search'
-        span class:'btn-toolbar span8 pull-right', ->
+        span class:'btn-toolbar span3', ->
+          input class:'search-query span3', type:'text', placeholder:'search'
+        span class:'btn-toolbar span9 pull-right', ->
           
           
-          span classs:'btn-loose-group',->    
+          span classs:'btn-loose-group pull-left',->    
             a class:'btn tt', rel:'tooltip', 'data-original-title':"you can also add files by dragging them right onto the window!", ->
               i class:'icon-info'
               i class:'icon-hand-up'
@@ -117,7 +145,7 @@ module 'App.File', (exports,top)->
               text "+ "
               i class:'icon-cloud'
 
-          div class:'btn-group pull-right', 'data-toggle':'buttons-radio', ->
+          span class:'btn-group pull-right', 'data-toggle':'buttons-radio', ->
             button class:"btn toggle-list #{if @currentList is @browser then 'active' else ''}", ->
               i class:'icon-th'
             button class:"btn toggle-list #{if @currentList is @list then 'active' else ''}", ->
@@ -125,7 +153,10 @@ module 'App.File', (exports,top)->
               
             
               
-      div class:'files-list row-fluid', ->
+      div class:'files-list', ->
+
+    doSearch: ->
+
 
     toggleList: ->
       console.log 'toggle-list'
@@ -144,22 +175,42 @@ module 'App.File', (exports,top)->
       @delegateEvents()
       @
 
+  # view to show the progress of an upload
+  # suppose to go away when finished
+  class Views.UploadProgress extends Backbone.View
+    tagName: 'div'
+    className: 'uplaod-progress row'
 
+    initialize: ->
+      console.log 'new upl task model: ',@model
 
+      @model.on 'progress', (perc)=>
+        @setPercentTo perc
+        if perc is 100 then @remove()
 
-  class Views.BrowserItem extends Backbone.View
-    tagName: 'li'
-    className: 'browser-item span3'
+      @model.on 'success', => @remove()
 
     template: ->
-      a class:'thumbnail', ->
-        img src:'http://placehold.it/100x100'
-        h5 "#{ @get('title') }"
+      span class:'span2 pull-left', "#{@name}"
+      span class:'span9 pull-right', ->
+        div class:'progress upload-progress', ->
+          div class:'bar'
 
+    setPercentTo: (p)->
+      @$('.bar').width "#{p}%"
+      @
 
-  class Views.Browser extends Views.DragOver
+  # icon-browser sub-view
+  class Views.Browser extends Backbone.View
     tagName: 'div'
-    className: 'row file-browser'
+    className: 'file-browser'
+
+    initialize: ->
+      @collection.on 'add', @addItem
+      @collection.on 'change', (f)->
+        f.brItemView.render()
+
+      @collection.on 'reset', => @render()
 
 
     template: ->
@@ -176,49 +227,10 @@ module 'App.File', (exports,top)->
         @addItem f
       @
 
-
-  class Views.ListItem extends Backbone.View
-    tagName: 'tr'
-    className: 'file-list-item'
-
-    template: ->
-      td @get('title')
-      td @get('status')
-      td moment(@get('created')).format("MMM D h:mm:ss a")
-      td @get('localPath')
-
-
-  # view to show the progress of an upload
-  # suppose to go away at the end
-  class Views.UploadProgress extends Backbone.View
-    tagName: 'tr'
-    className: 'uplaod-progress'
-
-    initialize: ->
-      console.log 'new upl task model: ',@model
-
-      @model.on 'progress', (perc)=>
-        @setPercentTo perc
-        if perc is 100 then @remove()
-
-      @model.on 'success', => @remove()
-
-    template: ->
-      td colspan:'1', "#{@name}"
-      td colspan:'3', ->
-        div class:'progress upload-progress', ->
-          div class:'bar'
-
-    setPercentTo: (p)->
-      @$('.bar').width "#{p}%"
-      @
-
-
-
-  class Views.List extends Views.DragOver
+  # list sub-view
+  class Views.List extends Backbone.View
     tagName: 'div'
     className: 'container file-list'
-    # id: 'file-list'
 
     initialize: ->
       @collection.on 'add', @addItem
@@ -227,17 +239,6 @@ module 'App.File', (exports,top)->
 
       @collection.on 'reset', => @render()
 
-      # when ever an upload starts, get the task and make a progress view for it
-      @collection.on 'upload:start', (task)=>
-        task.view = new Views.UploadProgress { model: task }
-        task.view.render().open @$('thead')
-
-
-    events:
-      'dragenter table': 'dragEnter'
-      #'dragover table': 'dragOver'
-      'dragleave table': 'dragLeave'
-      'drop table': 'drop'
 
     template: ->
       table class:'table table-fluid span12', ->
@@ -265,5 +266,41 @@ module 'App.File', (exports,top)->
 
       @delegateEvents()
       @
+
+
+  # just the thumbnail part of the view
+  class Views.Thumnbail extends Backbone.View
+    tagName: 'span'
+    className: 'file-icon'
+
+    template: ->
+      img src:"#{@thumbnail()}"
+
+  # single items in a list
+  class Views.ListItem extends Backbone.View
+    tagName: 'tr'
+    className: 'file-list-item'
+
+    template: ->
+      td @get('title')
+      td @get('status')
+      td moment(@get('created')).format("MMM D h:mm:ss a")
+      td @get('localPath')
+
+  # single icon items in the browser view
+  class Views.BrowserItem extends Backbone.View
+    tagName: 'li'
+    className: 'browser-item span3'
+
+    template: ->
+      div class:'thumbnail', ->
+        img src:"#{@thumbnail()}"
+        div class:'item-info caption', ->
+          h5 ->
+            i class:"icon-#{@icon()}"
+            text " #{ @get('title') }"
+
+
+ 
 
   [exports.Model,exports.Collection] = [Model, Collection]

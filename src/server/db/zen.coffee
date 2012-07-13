@@ -1,10 +1,20 @@
 https = require 'https'
 CFG = require './../config'
 {EventEmitter} = require 'events'
+_ = require 'underscore'
+
+wait = (someTime,thenDo) ->
+  setTimeout thenDo, someTime
+doEvery = (someTime,action)->
+  setInterval action, someTime
+
 
 class Zencoder extends EventEmitter
 
   constructor: (@file)->
+    @prepareJobReq()
+
+  prepareJobReq: ->
     
     if @file.type is 'video'
       output = [
@@ -29,11 +39,14 @@ class Zencoder extends EventEmitter
       o.url = "s3://#{CFG.S3.MEDIA_BUCKET}/#{@file._id}.#{o.format}"
       o.public = 1
       o.format isnt @file.ext
-    
-    if @file.type is 'video'
-      output.thumbnails = { interval: 10 }
+      if @file.type is 'video'
+        o.thumbnails =
+          number: 10
+          base_url: "s3://#{CFG.S3.MEDIA_BUCKET}/"
+          prefix: "#{@file._id}"
+          width: 400
 
-    @jobBody = 
+    @jobReq = 
       input: "s3://#{CFG.S3.MEDIA_BUCKET}/#{@file._id}.#{@file.ext}"
       output: output
 
@@ -41,19 +54,23 @@ class Zencoder extends EventEmitter
     @statusChecker = doEvery 1000, @getJobStatus
 
   stopCheckingStatus: ->
-    cancelTimeout @statusChecker
+    clearTimeout @statusChecker
 
   getJobStatus: =>
-
     options =
       host: CFG.ZENCODER.API_HOST
-      path: "/api/v2/jobs/#{@job.id}/progress.json?api_key=#{}"
+      path: "/api/v2/jobs/#{@job.id}/progress.json?api_key=#{CFG.ZENCODER.API_KEY}"
+      headers:
+        'Accepts':'application/json'
+
 
     https.get options, (resp)=>
+      resp.setEncoding 'utf8'
       resp.on 'data', (prog)=>
-        @job.progress = prog
+        @job.progress = prog.progress
         eventType = if prog.state is 'finished' then 'finished' else 'progress'
         @emit eventType, @job
+        if eventType is 'finished' then @stopCheckingStatus()
 
 
   encode: ->
@@ -64,16 +81,23 @@ class Zencoder extends EventEmitter
       method: 'POST'
       headers:
         'Content-type':'application/json'
-        'Content-length': JSON.stringify(@jobBody).length
+        'Content-length': JSON.stringify(@jobReq).length
         'Accept': 'application/json'
         'Zencoder-Api-Key': CFG.ZENCODER.API_KEY
 
+    console.log 'requesting job: ',options, @jobReq
     jobCreate = https.request options, (resp)=>
+      resp.setEncoding 'utf8'
+
       resp.on 'data', (@job)=>
+        if _.isString(@job)
+          @job = JSON.parse @job
+
+        console.log 'from zen: ',@job
 
       resp.on 'end', @startCheckingStatus
 
-    jobCreate.end JSON.stringify @jobBody, 'utf8'
+    jobCreate.end JSON.stringify @jobReq, 'utf8'
 
 
 module.exports = Zencoder

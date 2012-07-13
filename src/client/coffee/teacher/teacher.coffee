@@ -69,8 +69,7 @@ module 'App.Teacher', (exports,top)->
       @io = top.app.sock
       @io.on 'file:sync', (data)=>
         console.log 'file:sync',data
-        console.log @teacher.files
-        @teacher.files.fromDB(data)
+        @filez.fromDB(data)
 
     showTopBar: ->
       @views.topBar.render().open()
