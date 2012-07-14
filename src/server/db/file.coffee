@@ -128,23 +128,22 @@ FileSchema.statics =
     @find({owner: userId}).run cb
 
   # receive sync messages from client-side Backbone models
-  sync: (data, cb)->
+  sync: (data, sock, cb)->
 
-    { method, model, options, userId } = data
+    console.log 'socket: this user: ', sock.store.data.userId
+
+    { method, model, options } = data
+    userId = sock.store.data.userId
 
     switch method
       
       when 'read'
         if (id = model._id)
-          @findById id, (err,model)=>
+          @getAllForUser id, (err,model)=>
             cb err, model
         else
           @find (err,model)=>
             cb err, model
-
-      when 'read-user'
-        @getForUser userId, (err,myModels)=>
-          cb err,myModels
 
       when 'update'
         @findById model._id, (err,modelToUpdate)=>

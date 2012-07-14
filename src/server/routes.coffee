@@ -35,6 +35,7 @@ module.exports = (app)->
 
 
   app.post '/upload', userAuth, (req,res)->
+    console.log 'upload attempt'
     uploadFile = new File { owner: req.user._id }
     uploadFile.upload req
 

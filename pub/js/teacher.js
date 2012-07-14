@@ -2,7 +2,8 @@
 (function() {
   var __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice;
 
   module('App.File', function(exports, top) {
     var Collection, Model, Views, _ref;
@@ -76,7 +77,7 @@
       };
 
       Collection.prototype.comparator = function() {
-        return 0 - this.get('created');
+        return moment(this.get('created')).valueOf();
       };
 
       Collection.prototype.filteredBy = function(searchTerm) {
@@ -193,7 +194,8 @@
           return this.searchWait = wait(200, function() {
             return _this.currentList.doSearch($(e.target).val());
           });
-        }
+        },
+        'click .record-upload': 'openRecorder'
       };
 
       Main.prototype.initialize = function() {
@@ -223,7 +225,7 @@
 
       Main.prototype.template = function() {
         div({
-          "class": 'row'
+          "class": 'row files-top-bar'
         }, function() {
           span({
             "class": 'btn-toolbar span3'
@@ -238,7 +240,7 @@
             "class": 'btn-toolbar span9 pull-right'
           }, function() {
             span({
-              classs: 'btn-loose-group pull-left'
+              "class": 'btn-group pull-left span3'
             }, function() {
               a({
                 "class": 'btn tt',
@@ -262,7 +264,7 @@
                   "class": 'icon-folder-open'
                 });
               });
-              return button({
+              button({
                 "class": 'btn internet-upload tt',
                 rel: 'tooltip',
                 'data-original-title': 'find files on the internet to upload'
@@ -272,9 +274,19 @@
                   "class": 'icon-cloud'
                 });
               });
+              return button({
+                "class": 'btn record-upload tt',
+                rel: 'tooltip',
+                'data-original-title': 'record and save some audio'
+              }, function() {
+                text("+ ");
+                return i({
+                  "class": "icon-comment"
+                });
+              });
             });
-            return span({
-              "class": 'btn-group pull-right',
+            span({
+              "class": 'btn-group pull-right span2',
               'data-toggle': 'buttons-radio'
             }, function() {
               button({
@@ -292,6 +304,28 @@
                 });
               });
             });
+            return span({
+              "class": 'btn-group pull-right span4',
+              'data-toggle': 'buttons-checkbox'
+            }, function() {
+              button({
+                "class": 'btn'
+              }, function() {
+                return i({
+                  "class": 'icon-facetime-video'
+                });
+              });
+              button({
+                "class": 'btn'
+              }, function() {
+                return i({
+                  "class": 'icon-volume-up'
+                });
+              });
+              return button({
+                "class": 'btn'
+              }, "PDF");
+            });
           });
         });
         return div({
@@ -301,6 +335,17 @@
 
       Main.prototype.doSearch = function() {
         return console.log('searching!!!');
+      };
+
+      Main.prototype.openRecorder = function() {
+        var _ref, _ref1;
+        if ((_ref = this.recorder) != null) {
+          _ref.remove();
+        }
+        if ((_ref1 = this.recorder) == null) {
+          this.recorder = new Views.Recorder();
+        }
+        return this.recorder.render().open();
       };
 
       Main.prototype.toggleList = function() {
@@ -316,9 +361,29 @@
       };
 
       Main.prototype.render = function() {
+        var _this = this;
         this.$el.html(ck.render(this.template, this));
         this.renderList();
         this.$('.tt').tooltip();
+        this.$('.select-upload').browseElement().on('change', function(e) {
+          var f, _i, _len, _ref, _results;
+          _ref = e.target.files;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            f = _ref[_i];
+            _results.push(_this.collection.uploadFile(f));
+          }
+          return _results;
+        });
+        this.$('.files-top-bar').removeClass('navbar-fixed-top').waypoint(function(event, direction) {
+          if (direction === 'down') {
+            return _this.$('.files-top-bar').hide().addClass('sticky').fadeIn();
+          } else {
+            return _this.$('.files-top-bar').hide().removeClass('sticky').fadeIn();
+          }
+        }, {
+          offset: 0
+        });
         this.delegateEvents();
         return this;
       };
@@ -375,6 +440,60 @@
       };
 
       return UploadProgress;
+
+    })(Backbone.View);
+    Views.Recorder = (function(_super) {
+
+      __extends(Recorder, _super);
+
+      function Recorder() {
+        return Recorder.__super__.constructor.apply(this, arguments);
+      }
+
+      Recorder.prototype.tagName = 'div';
+
+      Recorder.prototype.className = 'modal popup-recorder';
+
+      Recorder.prototype.template = function() {
+        div({
+          "class": 'modal-header'
+        }, function() {
+          return h2('Record and upload your voice');
+        });
+        div({
+          "class": 'modal-body'
+        }, function() {});
+        return div({
+          "class": 'modal-footer'
+        }, function() {
+          button({
+            "class": 'btn'
+          }, function() {
+            return text(' Nevermind');
+          });
+          return button({
+            "class": 'btn btn-success'
+          }, function() {
+            i({
+              "class": 'icon-upload'
+            });
+            return text(' Upload it!');
+          });
+        });
+      };
+
+      Recorder.prototype.render = function() {
+        var _ref;
+        Recorder.__super__.render.call(this);
+        if ((_ref = this.recorder) == null) {
+          this.recorder = new App.Recording.Views.Recorder();
+        }
+        this.recorder.render().open(this.$('.modal-body'));
+        this.$el.modal('show');
+        return this;
+      };
+
+      return Recorder;
 
     })(Backbone.View);
     Views.Browser = (function(_super) {
@@ -637,6 +756,210 @@
 
     })(Backbone.View);
     return _ref = [Model, Collection], exports.Model = _ref[0], exports.Collection = _ref[1], _ref;
+  });
+
+  module('App.Recording', function(exports, top) {
+    var Collection, Model, Views;
+    Model = (function(_super) {
+
+      __extends(Model, _super);
+
+      function Model() {
+        return Model.__super__.constructor.apply(this, arguments);
+      }
+
+      return Model;
+
+    })(App.File.Model);
+    Collection = (function(_super) {
+
+      __extends(Collection, _super);
+
+      function Collection() {
+        return Collection.__super__.constructor.apply(this, arguments);
+      }
+
+      Collection.prototype.model = Model;
+
+      return Collection;
+
+    })(Backbone.Collection);
+    exports.Views = Views = {};
+    return Views.Recorder = (function(_super) {
+
+      __extends(Recorder, _super);
+
+      function Recorder() {
+        return Recorder.__super__.constructor.apply(this, arguments);
+      }
+
+      Recorder.prototype.tagName = 'div';
+
+      Recorder.prototype.className = 'recorder';
+
+      Recorder.prototype.initialize = function() {};
+
+      Recorder.prototype.events = {
+        'click .record': 'record',
+        'click .play': 'play',
+        'click .stop': 'stop',
+        'click .pause': 'pause'
+      };
+
+      Recorder.prototype.template = function() {
+        applet({
+          "class": 'recorder-applet',
+          archive: '/java/nanogong.jar',
+          code: 'gong.NanoGong',
+          width: 150,
+          height: 40
+        }, function() {
+          param({
+            name: 'AudioFormat',
+            value: 'Speex'
+          });
+          param({
+            name: 'MaxDuration',
+            value: '1200'
+          });
+          return param({
+            name: 'SamplingRate',
+            value: '16000'
+          });
+        });
+        div({
+          "class": 'scrubber'
+        }, function() {});
+        div({
+          "class": 'status'
+        });
+        return div({
+          "class": 'recorder-main'
+        }, function() {
+          button({
+            "class": 'btn btn-danger record state-stopped state-closed state-paused-recording'
+          }, function() {
+            i({
+              "class": 'icon-comment'
+            });
+            return text(' rec');
+          });
+          button({
+            "class": 'btn pause state-playing state-recording'
+          }, function() {
+            i({
+              "class": 'icon-pause'
+            });
+            return text(' pause');
+          });
+          button({
+            "class": 'btn btn-success play state-paused state-stopped state-paused'
+          }, function() {
+            i({
+              "class": 'icon-play'
+            });
+            return text(' play');
+          });
+          return button({
+            "class": 'btn btn-inverse stop state-paused state-recording state-playing state-paused-recording'
+          }, function() {
+            i({
+              "class": 'icon-stop'
+            });
+            return text(' stop');
+          });
+        });
+      };
+
+      Recorder.prototype.appEvents = function() {
+        var _this = this;
+        return doEvery(200, function() {
+          return _this.statusCheck();
+        });
+      };
+
+      Recorder.prototype.handleNewStatus = function() {
+        this.$('.recorder-main .btn').hide();
+        return this.$(".recorder-main .state-" + this.status).show();
+      };
+
+      Recorder.prototype.statusCheck = function() {
+        if (this.status !== (this.status = this.getStatus().replace(' ', '-'))) {
+          this.trigger('status', this.status);
+          this.$('.status').text(this.status);
+          return this.handleNewStatus();
+        }
+      };
+
+      Recorder.prototype.render = function() {
+        var _ref;
+        Recorder.__super__.render.call(this);
+        this.rec = this.$('.recorder-applet')[0];
+        this.appEvents();
+        if ((_ref = this.scrubber) == null) {
+          this.scrubber = new UI.Slider();
+        }
+        this.scrubber.render().open(this.$('.scrubber'));
+        return this;
+      };
+
+      Recorder.prototype._req = function() {
+        var args, res, _ref;
+        args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        res = (_ref = this.rec).sendGongRequest.apply(_ref, args);
+        return res;
+      };
+
+      Recorder.prototype.record = function() {
+        var duration;
+        duration = this._req('RecordMedia', 'audio', 1200000);
+        return this;
+      };
+
+      Recorder.prototype.stop = function() {
+        this._req('StopMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.pause = function() {
+        this._req('PauseMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.clear = function() {
+        this._req('ClearMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.play = function() {
+        this._req('PlayMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.getStatus = function() {
+        return this._req('GetMediaStatus', 'audio');
+      };
+
+      Recorder.prototype.getTime = function() {
+        return this._req('GetMediaTime', 'audio');
+      };
+
+      Recorder.prototype.setTime = function(s) {
+        this._req('SetMediaTime', 'audio', Math.floor(s * 1000));
+        return this;
+      };
+
+      Recorder.prototype.getAudioLevel = function() {
+        return this._req('GetAudioLevel', 'audio');
+      };
+
+      Recorder.prototype.upload = function() {
+        return this._req('PostToForm', 'http://lingualab.io/upload', 'file', '', 'recording.spx');
+      };
+
+      return Recorder;
+
+    })(Backbone.View);
   });
 
   module('App.Teacher', function(exports, top) {

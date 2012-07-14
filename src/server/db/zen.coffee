@@ -44,7 +44,7 @@ class Zencoder extends EventEmitter
           number: 10
           base_url: "s3://#{CFG.S3.MEDIA_BUCKET}/"
           prefix: "#{@file._id}"
-          size: "400x400"
+          size: "300x400"
           aspect_mode: 'pad'
 
     @jobReq = 

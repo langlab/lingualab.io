@@ -38,7 +38,7 @@ module 'App.File', (exports,top)->
       @fetch()
 
     comparator: ->
-      0 - @get 'created'
+      moment(@get 'created').valueOf()
 
     filteredBy: (searchTerm)->
       @filter (m)->
@@ -72,8 +72,6 @@ module 'App.File', (exports,top)->
       
       # trigger out the task so that event handlers can be attached by whatever cares
       @trigger 'upload:start', uplTask
-
-
 
 
 
@@ -127,6 +125,8 @@ module 'App.File', (exports,top)->
         clearTimeout @searchWait
         @searchWait = wait 200, => @currentList.doSearch($(e.target).val())
 
+      'click .record-upload': 'openRecorder'
+
 
     initialize: ->
       @browser ?= new Views.Browser { collection: @collection }
@@ -141,17 +141,17 @@ module 'App.File', (exports,top)->
       @collection.on 'upload:start', (task)=>
         task.view = new Views.UploadProgress { model: task }
         task.view.render().$el.prependTo @$el
-        
+
 
     template: ->
           
-      div class:'row', ->
+      div class:'row files-top-bar', ->
         span class:'btn-toolbar span3', ->
           input class:'search-query span3', type:'text', placeholder:'search'
         span class:'btn-toolbar span9 pull-right', ->
           
-          
-          span classs:'btn-loose-group pull-left',->    
+          # for uploading
+          span class:'btn-group pull-left span3',->
             a class:'btn tt', rel:'tooltip', 'data-original-title':"you can also add files by dragging them right onto the window!", ->
               i class:'icon-info'
               i class:'icon-hand-up'
@@ -161,12 +161,23 @@ module 'App.File', (exports,top)->
             button class:'btn internet-upload tt', rel:'tooltip', 'data-original-title':'find files on the internet to upload', ->
               text "+ "
               i class:'icon-cloud'
+            button class:'btn record-upload tt', rel:'tooltip', 'data-original-title':'record and save some audio', ->
+              text "+ "
+              i class:"icon-comment"
 
-          span class:'btn-group pull-right', 'data-toggle':'buttons-radio', ->
+
+          span class:'btn-group pull-right span2', 'data-toggle':'buttons-radio', ->
             button class:"btn toggle-list #{if @currentList is @browser then 'active' else ''}", ->
               i class:'icon-th'
             button class:"btn toggle-list #{if @currentList is @list then 'active' else ''}", ->
               i class:'icon-list'
+
+          span class:'btn-group pull-right span4', 'data-toggle':'buttons-checkbox', ->
+            button class:'btn', ->
+              i class:'icon-facetime-video'
+            button class:'btn', ->
+              i class:'icon-volume-up'
+            button class:'btn', "PDF"
               
             
               
@@ -174,6 +185,12 @@ module 'App.File', (exports,top)->
 
     doSearch: ->
       console.log 'searching!!!'
+
+
+    openRecorder: ->
+      @recorder?.remove()
+      @recorder ?= new Views.Recorder()
+      @recorder.render().open()
 
 
     toggleList: ->
@@ -190,6 +207,16 @@ module 'App.File', (exports,top)->
       @$el.html ck.render @template, @
       @renderList()
       @$('.tt').tooltip()
+      @$('.select-upload').browseElement().on 'change', (e)=>
+        @collection.uploadFile(f) for f in e.target.files
+
+      # fix the top search bar on scroll down
+      @$('.files-top-bar').removeClass('navbar-fixed-top').waypoint (event,direction)=>
+        if direction is 'down' then @$('.files-top-bar').hide().addClass('sticky').fadeIn()
+        else @$('.files-top-bar').hide().removeClass('sticky').fadeIn()
+      , { offset: 0 }
+
+           
       @delegateEvents()
       @
 
@@ -218,6 +245,29 @@ module 'App.File', (exports,top)->
       @$('.bar').width "#{p}%"
       @
 
+
+  class Views.Recorder extends Backbone.View
+    tagName: 'div'
+    className: 'modal popup-recorder'
+
+    template: ->
+      div class:'modal-header', ->
+        h2 'Record and upload your voice'
+      div class:'modal-body', ->
+      div class:'modal-footer', ->
+        button class:'btn', ->
+          text ' Nevermind'
+        button class:'btn btn-success', ->
+          i class:'icon-upload'
+          text ' Upload it!'
+
+
+    render: ->
+      super()
+      @recorder ?= new App.Recording.Views.Recorder()
+      @recorder.render().open @$('.modal-body')
+      @$el.modal('show')
+      @
 
 
   # icon-browser sub-view

@@ -45,7 +45,7 @@ module.exports = (app)->
     
     # receive data from backbone sync and pass to mongoose object
     socket.on 'file', (data,cb)->
-      File.sync data, cb
+      File.sync data, this, cb
 
   
   File.socketSetup(sio)
