@@ -21,7 +21,7 @@ ss = new ExpMongoStore {
 sio = io.listen CFG.SIO.PORT
 
 sio.configure ->
-  iostore = new MongoStore {url: 'mongodb://localhost:27017/lingualab'}
+  iostore = new MongoStore {url: "mongodb://#{CFG.DB.HOST}:#{CFG.DB.PORT}/#{CFG.DB.NAME}"}
   iostore.on 'error', console.error
   sio.set 'store', iostore
 

@@ -39,6 +39,7 @@ module.exports =
   DB:
     HOST: 'lingualab.io'
     NAME: 'lingualab'
+    PORT: 27017
 
   SIO:
     PORT: 1999
