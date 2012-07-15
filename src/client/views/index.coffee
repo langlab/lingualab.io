@@ -16,7 +16,7 @@ html lang:'en', ->
     div class:'main container', ->
 
     # scripts
-    script type:'text/javascript',src:'/socket.io/socket.io.js'
+    script type:'text/javascript',src:"http://lingualab.io:#{@CFG.SIO.PORT}/socket.io/socket.io.js"
     script type:'text/javascript',src:'/ck.js'
     script type:'text/javascript',src:'/js/vendor.js' # everything besides sockets
 
@@ -41,7 +41,7 @@ html lang:'en', ->
       script id:'sessionBootstrap', type:'text/javascript', """
 
         window.app = #{ JSON.stringify clientData }
-        window.app.sock = window.io.connect('http://#{ @CFG.HOST() }:#{ @CFG.PORT() }')
+        window.app.sock = window.io.connect('http://#{ @CFG.HOST() }:#{ @CFG.SIO.PORT }')
 
         setTimeout(function() { $('#sessionBootstrap').remove(); }, 500 );
       """

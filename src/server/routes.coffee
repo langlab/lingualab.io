@@ -13,7 +13,7 @@ userAuth = (req,res,nxt)->
 
 module.exports = (app)->
 
-  {File, User} = app.db
+  {File, User} = require './db'
 
   app.get '/', (req,res)->
     if req.user?

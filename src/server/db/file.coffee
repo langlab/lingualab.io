@@ -130,10 +130,10 @@ FileSchema.statics =
   # receive sync messages from client-side Backbone models
   sync: (data, sock, cb)->
 
-    console.log 'socket: this user: ', sock.store.data.userId
+    console.log 'socket: this user: ', sock.handshake.userId
 
     { method, model, options } = data
-    userId = sock.store.data.userId
+    userId = sock.handshake.userId
 
     switch method
       

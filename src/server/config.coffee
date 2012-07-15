@@ -40,6 +40,9 @@ module.exports =
     HOST: 'lingualab.io'
     NAME: 'lingualab'
 
+  SIO:
+    PORT: 1999
+
 
   # have CLIENT return the configuration object to inject into the client
   CLIENT: ->

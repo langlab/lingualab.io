@@ -128,12 +128,19 @@ watchVendorJS = ->
 
 
 watchServer = ->
-  server = new watchedProcess {
+  aServer = new watchedProcess {
     cmd: 'coffee'
-    opts: ['lingualab.coffee']
+    opts: ['server/app.coffee']
     dir: "#{__dirname}/server/"
   }
-  server.start().watch()
+  aServer.start().watch()
+
+  sServer = new watchedProcess {
+    cmd: 'coffee'
+    opts: ['server/sockets.coffee']
+    dir: "#{__dirname}/server/"
+  }
+  sServer.start().watch()
   
 
 task 'dev', 'start coding, compile coffescript and stylus', (options)->

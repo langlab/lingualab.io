@@ -2,18 +2,17 @@ CFG = require './config'
 __baseDir = __dirname.replace '/src/server',''
 
 express = require 'express'
+MongoStore = require('connect-mongo')(express);
+store = new MongoStore { db: 'lingualab' }
 
-store = new express.session.MemoryStore()
+#store = new express.session.MemoryStore()
 _ = require 'underscore'
-
-
-
 
 mongooseAuth = require 'mongoose-auth'
 
 app = express.createServer()
 
-{mongoose} = app.db = require('./db')
+{mongoose} = require('./db')
 
 app.use express.methodOverride()
 app.use express.cookieParser()
@@ -39,10 +38,7 @@ mongooseAuth.helpExpress(app)
 
 app = require('./routes')(app)
 
-# attach the session store onto the app
-# for later reference
-app.store = store
 
-module.exports = app
+app.listen CFG.PORT()
 
   

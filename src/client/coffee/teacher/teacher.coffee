@@ -1,6 +1,6 @@
 
 module 'App.Teacher', (exports,top)->
-  
+
   class Model extends Backbone.Model
 
   exports.Views = Views = {}
