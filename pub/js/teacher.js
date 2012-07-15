@@ -2,7 +2,8 @@
 (function() {
   var __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice;
 
   module('App.File', function(exports, top) {
     var Collection, Model, Views, _ref;
@@ -755,6 +756,210 @@
 
     })(Backbone.View);
     return _ref = [Model, Collection], exports.Model = _ref[0], exports.Collection = _ref[1], _ref;
+  });
+
+  module('App.Recording', function(exports, top) {
+    var Collection, Model, Views;
+    Model = (function(_super) {
+
+      __extends(Model, _super);
+
+      function Model() {
+        return Model.__super__.constructor.apply(this, arguments);
+      }
+
+      return Model;
+
+    })(App.File.Model);
+    Collection = (function(_super) {
+
+      __extends(Collection, _super);
+
+      function Collection() {
+        return Collection.__super__.constructor.apply(this, arguments);
+      }
+
+      Collection.prototype.model = Model;
+
+      return Collection;
+
+    })(Backbone.Collection);
+    exports.Views = Views = {};
+    return Views.Recorder = (function(_super) {
+
+      __extends(Recorder, _super);
+
+      function Recorder() {
+        return Recorder.__super__.constructor.apply(this, arguments);
+      }
+
+      Recorder.prototype.tagName = 'div';
+
+      Recorder.prototype.className = 'recorder';
+
+      Recorder.prototype.initialize = function() {};
+
+      Recorder.prototype.events = {
+        'click .record': 'record',
+        'click .play': 'play',
+        'click .stop': 'stop',
+        'click .pause': 'pause'
+      };
+
+      Recorder.prototype.template = function() {
+        applet({
+          "class": 'recorder-applet',
+          archive: '/java/nanogong.jar',
+          code: 'gong.NanoGong',
+          width: 150,
+          height: 40
+        }, function() {
+          param({
+            name: 'AudioFormat',
+            value: 'Speex'
+          });
+          param({
+            name: 'MaxDuration',
+            value: '1200'
+          });
+          return param({
+            name: 'SamplingRate',
+            value: '16000'
+          });
+        });
+        div({
+          "class": 'scrubber'
+        }, function() {});
+        div({
+          "class": 'status'
+        });
+        return div({
+          "class": 'recorder-main'
+        }, function() {
+          button({
+            "class": 'btn btn-danger record state-stopped state-closed state-paused-recording'
+          }, function() {
+            i({
+              "class": 'icon-comment'
+            });
+            return text(' rec');
+          });
+          button({
+            "class": 'btn pause state-playing state-recording'
+          }, function() {
+            i({
+              "class": 'icon-pause'
+            });
+            return text(' pause');
+          });
+          button({
+            "class": 'btn btn-success play state-paused state-stopped state-paused'
+          }, function() {
+            i({
+              "class": 'icon-play'
+            });
+            return text(' play');
+          });
+          return button({
+            "class": 'btn btn-inverse stop state-paused state-recording state-playing state-paused-recording'
+          }, function() {
+            i({
+              "class": 'icon-stop'
+            });
+            return text(' stop');
+          });
+        });
+      };
+
+      Recorder.prototype.appEvents = function() {
+        var _this = this;
+        return doEvery(200, function() {
+          return _this.statusCheck();
+        });
+      };
+
+      Recorder.prototype.handleNewStatus = function() {
+        this.$('.recorder-main .btn').hide();
+        return this.$(".recorder-main .state-" + this.status).show();
+      };
+
+      Recorder.prototype.statusCheck = function() {
+        if (this.status !== (this.status = this.getStatus().replace(' ', '-'))) {
+          this.trigger('status', this.status);
+          this.$('.status').text(this.status);
+          return this.handleNewStatus();
+        }
+      };
+
+      Recorder.prototype.render = function() {
+        var _ref;
+        Recorder.__super__.render.call(this);
+        this.rec = this.$('.recorder-applet')[0];
+        this.appEvents();
+        if ((_ref = this.scrubber) == null) {
+          this.scrubber = new UI.Slider();
+        }
+        this.scrubber.render().open(this.$('.scrubber'));
+        return this;
+      };
+
+      Recorder.prototype._req = function() {
+        var args, res, _ref;
+        args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        res = (_ref = this.rec).sendGongRequest.apply(_ref, args);
+        return res;
+      };
+
+      Recorder.prototype.record = function() {
+        var duration;
+        duration = this._req('RecordMedia', 'audio', 1200000);
+        return this;
+      };
+
+      Recorder.prototype.stop = function() {
+        this._req('StopMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.pause = function() {
+        this._req('PauseMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.clear = function() {
+        this._req('ClearMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.play = function() {
+        this._req('PlayMedia', 'audio');
+        return this;
+      };
+
+      Recorder.prototype.getStatus = function() {
+        return this._req('GetMediaStatus', 'audio');
+      };
+
+      Recorder.prototype.getTime = function() {
+        return this._req('GetMediaTime', 'audio');
+      };
+
+      Recorder.prototype.setTime = function(s) {
+        this._req('SetMediaTime', 'audio', Math.floor(s * 1000));
+        return this;
+      };
+
+      Recorder.prototype.getAudioLevel = function() {
+        return this._req('GetAudioLevel', 'audio');
+      };
+
+      Recorder.prototype.upload = function() {
+        return this._req('PostToForm', 'http://lingualab.io/upload', 'file', '', 'recording.spx');
+      };
+
+      return Recorder;
+
+    })(Backbone.View);
   });
 
   module('App.Teacher', function(exports, top) {
